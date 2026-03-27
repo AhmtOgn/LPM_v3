@@ -1,0 +1,94 @@
+her uygulama başladığında biz lpm_db adlı databasede orm ile tablolar mı oluşuyor fakat içi boş
+
+application.properties dosyasındaki bu ayarlar:
+spring.jpa.hibernate.ddl-auto=create          # Her başlangıçta: TABIYO SİL, YENİDEN OLUŞTUR
+spring.jpa.defer-datasource-initialization=true   # Data.sql'i JPA'dan sonra çalıştır
+spring.sql.init.mode=always                   # Her zaman data.sql'i çalıştır
+Akış:
+1.
+Uygulama başlar
+2.
+Hibernate @Entity sınıflarını okur (Place, Student, Reservation)
+3.
+lpm_db veritabanında tabloları siler ve boş olarak yeniden oluşturur
+4.
+data.sql dosyasını çalıştırarak örnek verileri otomatik yükler
+Şu anda:
+Uygulama Başla
+    ↓
+Tablolar oluştur (boş)
+    ↓
+data.sql çalıştır → 4 place, 4 student, 3 reservation ekle
+    ↓
+Uygulama hazır (verilerle dolu)
+Eğer data.sql YÜKLENMESİNİ İSTEMEZSEN
+
+
+uygulamayı çalıştır postman gir
+Content-Type: application/json
+
+örnek:
+GET*******
+http://localhost:8080/place/all
+4 yer göreceksiniz
+GET
+http://localhost:8080/place/get/1
+ID 1 olan yeri göreceksiniz
+GET
+http://localhost:8080/student/all
+4 öğrenci göreceksiniz
+GET
+http://localhost:8080/reservation/all
+3 rezervasyon göreceksiniz
+
+
+
+POST******
+POST /place/add - Yeni yer ekle
+URL: http://localhost:8080/place/add
+Method: POST
+Body (JSON):
+{
+  "building": "D Blok",
+  "floor": "4",
+  "room": "401",
+  "seat": 40
+}
+POST /student/add - Yeni öğrenci ekle
+URL: http://localhost:8080/student/add
+Method: POST
+Body (JSON):
+{
+  "name": "Mert Yıldız",
+  "department": "Yazılım Mühendisliği"
+}
+POST /reservation/add - Yeni rezervasyon ekle
+URL: http://localhost:8080/reservation/add
+Method: POST
+Body (JSON):
+{
+  "date": "2026-03-12T10:00:00",
+  "duration": "2026-03-12T11:00:00",
+  "isReserved": true,
+  "student": {
+    "id": 1
+  },
+  "place": {
+    "id": 1
+  }
+}
+Postman'de adımlar:
+1.
+Method olarak POST seçin
+2.
+URL'yi yapıştırın
+3.
+Body sekmesine tıklayın
+4.
+raw seçin
+5.
+Sağ tarafta JSON seçin
+6.
+Body'yi yapıştırın
+7.
+Send tuşuna basın
