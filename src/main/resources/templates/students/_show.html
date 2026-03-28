@@ -1,0 +1,20 @@
+<div class="modal fade" id="showStudentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Student Details</h5>
+                <!-- Closing Button -->
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Just displays data -->
+                <p><strong>ID:</strong> <span th:text="${student.id}"></span></p>
+                <p><strong>Name:</strong> <span th:text="${student.name}"></span></p>
+                <p><strong>Department:</strong> <span th:text="${student.department}"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
