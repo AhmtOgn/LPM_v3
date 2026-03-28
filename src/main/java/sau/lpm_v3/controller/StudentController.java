@@ -67,8 +67,9 @@ public class StudentController {
 
     @PostMapping(value = "/add")
     public String userAdd(@ModelAttribute("student") StudentDTO studentDto) {
-        //Logs when a new entity
-        logger.info("Added a new student: {}", studentDto.getName());
+        //Logs when adding a new entity
+        // It is going to add USER DETAILS who performed to action
+        logger.info("A new Student [{}] ADDED.", studentDto.getName());
 
         //Before sending DTO to Service, converts to Entity
         Student student = new Student();
@@ -89,6 +90,10 @@ public class StudentController {
 
     @PostMapping("/update")
     public String updateStudent(@ModelAttribute("student") StudentDTO studentDto) {
+        // Logs when updated an entity
+        // It is going to add USER DETAILS who performed to action
+        logger.info("Student [{}] UPDATED", studentDto.getName());
+
         //Before sending DTO to Service, converts to Entity
         Student student = new Student();
 
@@ -103,6 +108,11 @@ public class StudentController {
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<String> deleteStudent(@PathVariable Long id) {
         if (id == null || id == 0) return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+
+        // Logs when deletint an entity
+        // It is going to add USER DETAILS who performed to action
+        logger.warn("Student [{}] DELETED", studentService.getStudentById(id).getName());
+
         studentService.deleteStudent(id);
         return new ResponseEntity<>(HttpStatus.OK);
     }
