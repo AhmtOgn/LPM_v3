@@ -76,7 +76,7 @@ public class StudentController {
         student.setDepartment(studentDto.getDepartment());
 
         studentService.createStudent(student);
-        return "redirect:/students/all";
+        return "redirect:/student/all";
     }
 
     @GetMapping("/update/{id}")
@@ -94,7 +94,7 @@ public class StudentController {
         student.setDepartment(studentDto.getDepartment());
 
         studentService.updateStudent(student.getId(),student);
-        return "redirect:students/all";
+        return "redirect:student/all";
     }
 
     @DeleteMapping("/delete/{id}")
