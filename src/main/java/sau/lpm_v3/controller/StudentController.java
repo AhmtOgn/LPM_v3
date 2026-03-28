@@ -86,15 +86,18 @@ public class StudentController {
         return "students/_update";
     }
 
+
     @PostMapping("/update")
     public String updateStudent(@ModelAttribute("student") StudentDTO studentDto) {
         //Before sending DTO to Service, converts to Entity
         Student student = new Student();
+
+        student.setId(studentDto.getId());
         student.setName(studentDto.getName());
         student.setDepartment(studentDto.getDepartment());
 
         studentService.updateStudent(student.getId(),student);
-        return "redirect:student/all";
+        return "redirect:/student/all";
     }
 
     @DeleteMapping("/delete/{id}")
