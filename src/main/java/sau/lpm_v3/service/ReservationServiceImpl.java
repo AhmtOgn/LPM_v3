@@ -1,9 +1,10 @@
 package sau.lpm_v3.service;
 
+import sau.lpm_v3.dtos.ReservationDTO;
 import sau.lpm_v3.exception.ErrorMessages;
 import sau.lpm_v3.exception.ResourceAlreadyExistsException;
 import sau.lpm_v3.exception.ResourceNotFoundException;
-import sau.lpm_v3.model.Reservation;
+import sau.lpm_v3.model.*;
 import sau.lpm_v3.repository.PlaceRepository;
 import sau.lpm_v3.repository.ReservationRepository;
 import sau.lpm_v3.repository.StudentRepository;
@@ -22,31 +23,59 @@ public class ReservationServiceImpl implements ReservationService {
         this.studentRepository = studentRepository;
         this.placeRepository = placeRepository;
     }
+
     @Override
-    public Reservation getReservationById(Long id) {
+    public ReservationDTO getReservationById(Long id) {
         return reservationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Reservation not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorMessages.ERROR_RESERVATION_NOT_FOUND + ": " + id)).viewAsReservationDTO();
     }
 
     @Override
-    public List<Reservation> getAllReservations() {
-        return reservationRepository.findAll();
+    public List<ReservationDTO> getAllReservations() {
+        return reservationRepository.findAll().stream().map(Reservation::viewAsReservationDTO).toList();
     }
+
     @Override
-    public Reservation createReservation(Reservation reservation) {
-        if (reservationRepository.findById(reservation.getId()).isPresent()) {
-            throw new ResourceAlreadyExistsException(ErrorMessages.ERROR_PLACE_ALREADY_EXIST + ": " + reservation.getId());
-        }
-        return reservationRepository.save(reservation);
+    public ReservationDTO createReservation(ReservationDTO reservationDto) {
+        // Convert DTO to Entity internally
+        Reservation reservation = reservationDto.toEntity();
+
+        // BUG FIX: Student ve Place entity'lerini repository'den çekip ilişkileri kur
+        Student student = studentRepository.findById(reservationDto.getStudentDto().getId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Student not found: " + reservationDto.getStudentDto().getId()));
+        Place place = placeRepository.findById(reservationDto.getPlaceDto().getId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Place not found: " + reservationDto.getPlaceDto().getId()));
+
+        reservation.setStudent(student);
+        reservation.setPlace(place);
+
+        return reservationRepository.save(reservation).viewAsReservationDTO();
     }
+
     @Override
-    public Reservation updateReservation(Long id, Reservation reservation) {
+    public ReservationDTO updateReservation(Long id, ReservationDTO reservationDto) {
         reservationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Reservation not found: " + id));
-        reservation.setId(id);
-        return reservationRepository.save(reservation);
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.ERROR_RESERVATION_NOT_FOUND + ": " + id));
+
+        Reservation reservation = reservationDto.toEntity();
+        reservation.setId(id); // URL'den gelen güvenli ID
+
+        Student student = studentRepository.findById(reservationDto.getStudentDto().getId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Student not found: " + reservationDto.getStudentDto().getId()));
+        Place place = placeRepository.findById(reservationDto.getPlaceDto().getId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Place not found: " + reservationDto.getPlaceDto().getId()));
+
+        reservation.setStudent(student);
+        reservation.setPlace(place);
+
+        return reservationRepository.save(reservation).viewAsReservationDTO();
     }
-    @Override
+
     public void deleteReservation(Long id) {
         reservationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorMessages.ERROR_RESERVATION_NOT_FOUND + ": " + id));

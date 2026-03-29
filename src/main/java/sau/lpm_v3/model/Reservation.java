@@ -1,10 +1,11 @@
 package sau.lpm_v3.model;
 
-import sau.lpm_v3.dtos.ReservationDTO;
+import sau.lpm_v3.dtos.*;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import sau.lpm_v3.dtos.StudentDTO;
 
 import java.time.LocalDateTime;
 
@@ -23,35 +24,20 @@ public class Reservation {
     private LocalDateTime duration;
     @Column(name="is_reserved")
     private boolean isReserved = false;
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "student_id")
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "student_id", nullable = false)
     private Student student;
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "place_id")
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "place_id", nullable = false)
     private Place place;
-
-    
     
     public ReservationDTO viewAsReservationDTO() {
-        ReservationDTO dto = new ReservationDTO(id, date, duration, isReserved);
-        if (student != null) {
-            dto.setStudentDTO(student.viewAsStudentDTO());
-        }
-        if (place != null) {
-            dto.setPlaceDTO(place.viewAsPlaceDTO());
-        }
-        return dto;
+        StudentDTO studentDto = (student != null) ? student.viewAsStudentDTO() : null;
+        PlaceDTO placeDto = (place != null) ? place.viewAsPlaceDTO() : null;
+
+        return new ReservationDTO(id, date, duration, isReserved, studentDto, placeDto);
     }
 
-    public Reservation(Reservation reservationDTO) {
-        this.id = reservationDTO.getId();
-        this.date = reservationDTO.getDate();
-        this.duration = reservationDTO.getDuration();
-        this.isReserved = reservationDTO.isReserved();
-        this.student = null;
-        this.place = null;
-    }
-    
-
-    
+    //<form th:action="@{/reservation/update/{id}(id=${reservation.id})}" th:field="${reservation}" method="post">
+    //                    <input type="hidden" th:field="*{id}" />
 }
