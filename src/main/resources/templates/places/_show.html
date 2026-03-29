@@ -1,0 +1,22 @@
+<div class="modal fade" id="showPlaceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Place Details</h5>
+                <!-- Closing Button -->
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Just displays data -->
+                <p><strong>ID:</strong> <span th:text="${place.id}"></span></p>
+                <p><strong>Building:</strong> <span th:text="${place.building}"></span></p>
+                <p><strong>Floor:</strong> <span th:text="${place.floor}"></span></p>
+                <p><strong>Room:</strong> <span th:text="${place.room}"></span></p>
+                <p><strong>Seat:</strong> <span th:text="${place.seat}"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
