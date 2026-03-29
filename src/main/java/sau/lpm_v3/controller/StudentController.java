@@ -66,17 +66,13 @@ public class StudentController {
     }
 
     @PostMapping(value = "/add")
-    public String userAdd(@ModelAttribute("student") StudentDTO studentDto) {
-        //Logs when adding a new entity
+    public String addStudent(@ModelAttribute("student") StudentDTO studentDto) {
+        // Logs when adding a new entity
         // It is going to add USER DETAILS who performed to action
         logger.info("A new Student [{}] ADDED.", studentDto.getName());
 
-        //Before sending DTO to Service, converts to Entity
-        Student student = new Student();
-        student.setName(studentDto.getName());
-        student.setDepartment(studentDto.getDepartment());
-
-        studentService.createStudent(student);
+        // Converting operating made in internally
+        studentService.createStudent(studentDto);
         return "redirect:/student/all";
     }
 
@@ -94,14 +90,8 @@ public class StudentController {
         // It is going to add USER DETAILS who performed to action
         logger.info("Student [{}] UPDATED", studentDto.getName());
 
-        //Before sending DTO to Service, converts to Entity
-        Student student = new Student();
-
-        student.setId(studentDto.getId());
-        student.setName(studentDto.getName());
-        student.setDepartment(studentDto.getDepartment());
-
-        studentService.updateStudent(student.getId(),student);
+        // Converting operating made in internally
+        studentService.updateStudent(studentDto.getId(),studentDto);
         return "redirect:/student/all";
     }
 

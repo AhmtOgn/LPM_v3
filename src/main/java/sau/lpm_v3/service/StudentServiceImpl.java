@@ -32,14 +32,20 @@ public class StudentServiceImpl implements StudentService {
         return studentRepository.findAll().stream().map(Student::viewAsStudentDTO).toList();
     }
 
-    public StudentDTO createStudent(Student student) {
+    public StudentDTO createStudent(StudentDTO studentDto) {
+        // Convert DTO to Entity internally
+        Student student = studentDto.toEntity();
+
         if (studentRepository.findById(student.getId()).isPresent()) {
             throw new ResourceAlreadyExistsException(ErrorMessages.ERROR_STUDENT_ALREADY_EXIST + ": " + student.getId());
         }
         return studentRepository.save(student).viewAsStudentDTO();
     }
 
-    public StudentDTO updateStudent(Long id, Student student) {
+    public StudentDTO updateStudent(Long id, StudentDTO studentDto) {
+        // Convert DTO to Entity internally
+        Student student = studentDto.toEntity();
+
         studentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorMessages.ERROR_STUDENT_NOT_FOUND + ": " + id));
         student.setId(id);
