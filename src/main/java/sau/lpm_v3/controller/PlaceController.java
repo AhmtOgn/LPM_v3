@@ -19,9 +19,11 @@ public class PlaceController {
     private final static Logger logger = LoggerFactory.getLogger(PlaceController.class);
     private final PlaceService placeService;
 
-    public PlaceController(PlaceService placeService) {this.placeService = placeService;}
+    public PlaceController(PlaceService placeService) {
+        this.placeService = placeService;
+    }
 
-    @GetMapping("/all")
+    @GetMapping("all")
     public String getAllPlaces(Model model) {
         List<PlaceDTO> placeDtos = placeService.getAllPlaces();
         model.addAttribute("places", placeDtos);
@@ -39,7 +41,7 @@ public class PlaceController {
         return "places/_add";
     }
 
-    @PostMapping(value = "/add")
+    @PostMapping("/add")
     public String addPlace(@ModelAttribute("place") PlaceDTO placeDto) {
         // Logs when add a new entity
         // It is going to add USER DETAILS who performed to action
@@ -57,7 +59,7 @@ public class PlaceController {
         return "places/_update";
     }
 
-    @PostMapping("/update/{id}")
+    @PostMapping("/update")
     public String updatePlace(@ModelAttribute("place") PlaceDTO placeDto) {
         // Logs when update an entity
         // It is going to add USER DETAILS who performed to action
