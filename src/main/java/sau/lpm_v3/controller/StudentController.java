@@ -45,11 +45,11 @@ public class StudentController {
 
     @PostMapping(value = "/add")
     public String addStudent(@ModelAttribute("student") StudentDTO studentDto) {
-        // Logs when adding a new entity
+        // Logs when add a new entity
         // It is going to add USER DETAILS who performed to action
         logger.info("A new Student [{}] ADDED.", studentDto.getName());
 
-        // Converting operating made in internally
+        // Converting operating made internally
         studentService.createStudent(studentDto);
         return "redirect:/student/all";
     }
@@ -64,18 +64,18 @@ public class StudentController {
 
     @PostMapping("/update")
     public String updateStudent(@ModelAttribute("student") StudentDTO studentDto) {
-        // Logs when updated an entity
+        // Logs when update an entity
         // It is going to add USER DETAILS who performed to action
         logger.info("Student [{}] UPDATED", studentDto.getName());
 
-        // Converting operating made in internally
+        // Converting operating made internally
         studentService.updateStudent(studentDto.getId(),studentDto);
         return "redirect:/student/all";
     }
 
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<String> deleteStudent(@PathVariable Long id) {
-        // Logs when deletint an entity
+        // Logs when delete an entity
         // It is going to add USER DETAILS who performed to action
         logger.warn("Student [{}] DELETED", studentService.getStudentById(id).getName());
 

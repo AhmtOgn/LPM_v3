@@ -46,7 +46,7 @@ public class PlaceController {
         logger.info("A new Place that ID is [{}] ADDED", placeDto.getId());
 
         // Converting operating made internally
-        placeService.createPlace(placeDto); // FIX SERVICE AND PlaceDTO
+        placeService.createPlace(placeDto);
         return "redirect:/place/all";
     }
 
