@@ -18,7 +18,7 @@ public class StudentController {
 
     //For Logging Requirement
     private static final Logger logger = LoggerFactory.getLogger(StudentController.class);
-    private StudentService studentService;
+    private final StudentService studentService;
 
     public StudentController(StudentService studentService) {
         this.studentService = studentService;
@@ -69,7 +69,7 @@ public class StudentController {
         logger.info("Student [{}] UPDATED", studentDto.getName());
 
         // Converting operating made internally
-        studentService.updateStudent(studentDto.getId(),studentDto);
+        studentService.updateStudent(studentDto.getId(), studentDto);
         return "redirect:/student/all";
     }
 

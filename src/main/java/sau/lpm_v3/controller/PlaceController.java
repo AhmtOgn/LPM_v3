@@ -1,7 +1,6 @@
 package sau.lpm_v3.controller;
 
 import sau.lpm_v3.dtos.PlaceDTO;
-import sau.lpm_v3.model.Place;
 import sau.lpm_v3.service.PlaceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,8 +28,8 @@ public class PlaceController {
         model.addAttribute("places", placeDtos);
         return "places/all";
     }
-    @GetMapping(value = "/{id}", produces = "application/json")
-    public String getStudent(@PathVariable Long id, Model model) {
+    @GetMapping(value = "/{id}")
+    public String getPlace(@PathVariable Long id, Model model) {
         model.addAttribute("place", placeService.getPlaceById(id));
         return "places/_show";
     }
@@ -71,10 +70,10 @@ public class PlaceController {
     }
 
     @DeleteMapping("/delete/{id}")
-    public ResponseEntity<Place> deletePlace(@PathVariable Long id) {
+    public ResponseEntity<String> deletePlace(@PathVariable Long id) {
         // Logs when delete an entity
         // It is going to add USER DETAILS who performed to action
-        logger.warn("Place with ID is [{}] DELETED", placeService.getPlaceById(id));
+        logger.warn("Place with ID is [{}] DELETED", id);
 
         placeService.deletePlace(id);
         return new ResponseEntity<>(HttpStatus.OK);
