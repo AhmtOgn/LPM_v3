@@ -31,7 +31,7 @@ public class StudentController {
         return "students/all";
     }
 
-    @GetMapping(value = "/{id}", produces = "application/json")
+    @GetMapping(value = "/{id}")
     public String getStudent(@PathVariable Long id, Model model){
         model.addAttribute("student", studentService.getStudentById(id));
         return "students/_show";

@@ -31,20 +31,20 @@
             </tr>
             </thead>
             <tbody>
-            <tr th:each="s:${places}">
-                <td th:text="${s.id}"></td>
-                <td th:text="${s.building}"></td>
-                <td th:text="${s.floor}"></td>
-                <td th:text="${s.room}"></td>
-                <td th:text="${s.seat}"></td>
+            <tr th:each="p:${places}">
+                <td th:text="${p.id}"></td>
+                <td th:text="${p.building}"></td>
+                <td th:text="${p.floor}"></td>
+                <td th:text="${p.room}"></td>
+                <td th:text="${p.seat}"></td>
                 <td>
-                    <a href="#" th:onclick="'javascript:Details('+${s.id}+');'" class="btn btn-info"
+                    <a href="#" th:onclick="'javascript:Details('+${p.id}+');'" class="btn btn-info"
                        data-bs-toggle="tooltip" data-bs-placement="bottom" title="Details"><i
                             class="bi bi-info-circle"></i></a>
-                    <a href="#" th:onclick="'javascript:Update('+${s.id}+');'" class="btn btn-warning"
+                    <a href="#" th:onclick="'javascript:Update('+${p.id}+');'" class="btn btn-warning"
                        data-bs-toggle="tooltip" data-bs-placement="bottom" title="Update"><i
                             class="bi bi-pencil"></i></a>
-                    <a href="#" th:onclick="'javascript:Delete('+${s.id}+');'" class="btn btn-danger"
+                    <a href="#" th:onclick="'javascript:Delete('+${p.id}+');'" class="btn btn-danger"
                        data-bs-toggle="tooltip" data-bs-placement="bottom" title="Delete"><i
                             class="bi bi-trash"></i></a>
                 </td>
