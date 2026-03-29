@@ -1,11 +1,7 @@
 package sau.lpm_v3.controller;
 
 import sau.lpm_v3.dtos.StudentDTO;
-import sau.lpm_v3.exception.ErrorMessages;
-import sau.lpm_v3.exception.ResourceNotFoundException;
-import sau.lpm_v3.model.Place;
-import sau.lpm_v3.model.Student;
-import sau.lpm_v3.service.StudentServiceImpl;
+import sau.lpm_v3.service.StudentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -22,39 +18,21 @@ public class StudentController {
 
     //For Logging Requirement
     private static final Logger logger = LoggerFactory.getLogger(StudentController.class);
-    private StudentServiceImpl studentService;
+    private final StudentService studentService;
 
-    public StudentController(StudentServiceImpl studentService) {
+    public StudentController(StudentService studentService) {
         this.studentService = studentService;
     }
 
-    /*
-    @GetMapping("/all")
-    public ResponseEntity<List<StudentDTO>> getAllStudents(){
-        logger.info("Get all student");
-        return new ResponseEntity<>(studentService.getAllStudents(), HttpStatus.OK);
-    }
-    */
-
     @GetMapping("all")
     public String getAllStudents(Model model){
-        List<StudentDTO> students = studentService.getAllStudents();
-        model.addAttribute("students", students);
+        List<StudentDTO> studentDtos = studentService.getAllStudents();
+        model.addAttribute("students", studentDtos);
         return "students/all";
     }
 
-    /*
-    @GetMapping(value = "/get/{id}", produces = "application/json")
-    public ResponseEntity<StudentDTO> getStudent(@PathVariable Long id) {
-        if (id == null || id == 0) return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-        logger.info("Get student by id {}", id);
-        return new ResponseEntity<>(studentService.getStudentById(id), HttpStatus.OK);
-    }
-    */
-
     @GetMapping(value = "/{id}", produces = "application/json")
     public String getStudent(@PathVariable Long id, Model model){
-        if(id==null || id == 0) return ErrorMessages.ERROR_STUDENT_NOT_FOUND;
         model.addAttribute("student", studentService.getStudentById(id));
         return "students/_show";
     }
@@ -66,16 +44,13 @@ public class StudentController {
     }
 
     @PostMapping(value = "/add")
-    public String userAdd(@ModelAttribute("student") StudentDTO studentDto) {
-        //Logs when a new entity
-        logger.info("Added a new student: {}", studentDto.getName());
+    public String addStudent(@ModelAttribute("student") StudentDTO studentDto) {
+        // Logs when add a new entity
+        // It is going to add USER DETAILS who performed to action
+        logger.info("A new Student [{}] ADDED.", studentDto.getName());
 
-        //Before sending DTO to Service, converts to Entity
-        Student student = new Student();
-        student.setName(studentDto.getName());
-        student.setDepartment(studentDto.getDepartment());
-
-        studentService.createStudent(student);
+        // Converting operating made internally
+        studentService.createStudent(studentDto);
         return "redirect:/student/all";
     }
 
@@ -89,20 +64,21 @@ public class StudentController {
 
     @PostMapping("/update")
     public String updateStudent(@ModelAttribute("student") StudentDTO studentDto) {
-        //Before sending DTO to Service, converts to Entity
-        Student student = new Student();
+        // Logs when update an entity
+        // It is going to add USER DETAILS who performed to action
+        logger.info("Student [{}] UPDATED", studentDto.getName());
 
-        student.setId(studentDto.getId());
-        student.setName(studentDto.getName());
-        student.setDepartment(studentDto.getDepartment());
-
-        studentService.updateStudent(student.getId(),student);
+        // Converting operating made internally
+        studentService.updateStudent(studentDto.getId(), studentDto);
         return "redirect:/student/all";
     }
 
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<String> deleteStudent(@PathVariable Long id) {
-        if (id == null || id == 0) return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        // Logs when delete an entity
+        // It is going to add USER DETAILS who performed to action
+        logger.warn("Student [{}] DELETED", studentService.getStudentById(id).getName());
+
         studentService.deleteStudent(id);
         return new ResponseEntity<>(HttpStatus.OK);
     }

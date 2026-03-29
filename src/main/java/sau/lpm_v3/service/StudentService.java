@@ -9,7 +9,7 @@ public interface StudentService {
     public List<StudentDTO> getAllStudents();
     public StudentDTO getStudentById(Long id);
     public Student getStudentEntityById(Long id);
-    public StudentDTO createStudent(Student student);
-    public StudentDTO updateStudent(Long id, Student student);
+    public StudentDTO createStudent(StudentDTO studentDto);
+    public StudentDTO updateStudent(Long id, StudentDTO studentDto);
     public void deleteStudent(Long id);
 }
