@@ -34,8 +34,8 @@
             <tbody>
             <tr th:each="r : ${reservations}">
                 <td th:text="${r.id}"></td>
-                <td th:text="${r.studentDto != null ? r.studentDto.studentName : ''}"></td>
-                <td th:text="${r.placeDto != null ? r.placeDto.building + ' - ' + r.place.Dto.room: ''}"></td>
+                <td th:text="${r.studentDto != null ? r.studentDto.name : ''}"></td>
+                <td th:text="${r.placeDto != null ? r.placeDto.building + ' - ' + r.placeDto.room: ''}"></td>
                 <td th:text="${r.date}"></td>
                 <td th:text="${r.duration}"></td>
                 <td>
