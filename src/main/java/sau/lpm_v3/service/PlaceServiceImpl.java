@@ -32,14 +32,20 @@ public class PlaceServiceImpl implements PlaceService {
         return placeRepository.findAll().stream().map(Place::viewAsPlaceDTO).toList();
     }
 
-    public PlaceDTO createPlace(Place place) {
-        if (placeRepository.findById(place.getId()).isPresent()) {
-            throw new ResourceAlreadyExistsException(ErrorMessages.ERROR_PLACE_ALREADY_EXIST + ": " + place.getId());
+    public PlaceDTO createPlace(PlaceDTO placeDto) {
+        // Convert DTO to Entity Internally
+        Place place = placeDto.toEntity();
+
+        if (placeRepository.findById(placeDto.getId()).isPresent()) {
+            throw new ResourceAlreadyExistsException(ErrorMessages.ERROR_PLACE_ALREADY_EXIST + ": " + placeDto.getId());
         }
         return placeRepository.save(place).viewAsPlaceDTO();
     }
 
-    public PlaceDTO updatePlace(Long id, Place place) {
+    public PlaceDTO updatePlace(Long id, PlaceDTO placeDto) {
+        // Convert DTO to Entity Internally
+        Place place = placeDto.toEntity();
+
         placeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorMessages.ERROR_PLACE_NOT_FOUND + ": " + id));
         place.setId(id);

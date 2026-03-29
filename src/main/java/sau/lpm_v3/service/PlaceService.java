@@ -9,7 +9,7 @@ public interface PlaceService {
     public List<PlaceDTO> getAllPlaces();
     public PlaceDTO getPlaceById(Long id);
     public Place getPlaceEntityById(Long id);
-    public PlaceDTO createPlace(Place place);
-    public PlaceDTO updatePlace(Long id, Place place);
+    public PlaceDTO createPlace(PlaceDTO placeDto);
+    public PlaceDTO updatePlace(Long id, PlaceDTO placeDto);
     public void deletePlace(Long id);
 }
