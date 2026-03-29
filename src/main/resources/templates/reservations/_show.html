@@ -1,0 +1,28 @@
+<div class="modal fade" id="showReservationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Reservation Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>ID:</strong> <span th:text="${reservation.id}"></span></p>
+
+                <!-- Student and Place Information -->
+                <p><strong>Student:</strong> <span th:text="${reservation.studentDto != null ? reservation.studentDto.name : 'N/A'}"></span></p>
+                <p><strong>Place:</strong> <span th:text="${reservation.placeDto != null ? reservation.placeDto.building + ' - ' + reservation.placeDto.room : 'N/A'}"></span></p>
+
+                <p><strong>Starting Date:</strong> <span th:text="${reservation.date}"></span></p>
+                <p><strong>End Date:</strong> <span th:text="${reservation.duration}"></span></p>
+
+                <p><strong>Status:</strong>
+                    <span th:if="${!reservation.reserved}" class="badge bg-success">Available</span>
+                    <span th:if="${reservation.reserved}" class="badge bg-danger">Reserved</span>
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
