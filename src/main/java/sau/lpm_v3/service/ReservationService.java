@@ -1,13 +1,14 @@
 package sau.lpm_v3.service;
 
+import sau.lpm_v3.dtos.ReservationDTO;
 import sau.lpm_v3.model.Reservation;
 
 import java.util.List;
 
 public interface ReservationService {
-    public List<Reservation> getAllReservations();
-    public Reservation getReservationById(Long id);
-    public Reservation createReservation(Reservation reservation);
-    public Reservation updateReservation(Long id, Reservation reservation);
+    public List<ReservationDTO> getAllReservations();
+    public ReservationDTO getReservationById(Long id);
+    public ReservationDTO createReservation(ReservationDTO reservationDto);
+    public ReservationDTO updateReservation(Long id, ReservationDTO reservationDto);
     public void deleteReservation(Long id);
 }
