@@ -8,7 +8,31 @@
             </div>
             <div class="modal-body">
 
-                <form th:action="@{/student/add}" th:object="${student}" method="post">
+                <form th:action="@{/student/add}" th:object="${student}" method="post" enctype="multipart/form-data">
+
+                    <div class="mb-3">
+                        <label for="imageFile" class="form-label">Profile Picture (Image Upload)</label>
+                        <input class="form-control" type="file" id="imageFile" th:field="*{imageFile}" accept="image/png, image/jpeg">
+                        <div class="form-text text-muted">Max file size: 5MB (Default Spring)</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" th:field="*{username}" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <input type="password" th:field="*{password}" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Role</label>
+                        <select th:field="*{role}" class="form-select" required>
+                            <option th:value="'USER'">User</option>
+                            <option th:value="'ADMIN'">Admin</option>
+                        </select>
+                    </div>
 
                     <div class="mb-3">
                         <label for="name" class="form-label">Student Name</label>

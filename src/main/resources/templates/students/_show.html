@@ -9,8 +9,12 @@
             <div class="modal-body">
                 <!-- Just displays data -->
                 <p><strong>ID:</strong> <span th:text="${student.id}"></span></p>
+                <img th:src="${student.imageURL != null ? student.imageURL : '/images/lpm.png'}"
+                     class="img-thumbnail mb-3" style="width: 150px;">
                 <p><strong>Name:</strong> <span th:text="${student.name}"></span></p>
+                <p><strong>Username:</strong> <span th:text="${student.username}"></span></p>
                 <p><strong>Department:</strong> <span th:text="${student.department}"></span></p>
+                <p><strong>Role:</strong> <span th:text="${student.role}"></span></p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
