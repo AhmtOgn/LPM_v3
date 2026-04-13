@@ -1,16 +1,14 @@
-<div class="modal fade" id="updateStudentModal" tabindex="-1">
+<div class="modal fade" id="updateStudentModal" tabindex="-1" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-warning text-dark">
                 <h5 class="modal-title">Update Student</h5>
-                <!-- Closing Button -->
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
 
                 <form th:action="@{/student/update}" th:object="${student}" method="post" enctype="multipart/form-data">
 
-                    <!-- Passes ID hiddenly -->
                     <input type="hidden" th:field="*{id}" />
 
                     <div class="mb-3">
@@ -20,18 +18,25 @@
 
                     <div class="mb-3">
                         <label class="form-label">Student Name</label>
-                        <!-- Comes contents filled-up -->
                         <input type="text" th:field="*{name}" class="form-control" required>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Depatment</label>
+                        <label class="form-label">Department</label>
                         <input type="text" th:field="*{department}" class="form-control" required>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Usarname</label>
+                        <label class="form-label">Username</label>
                         <input type="text" th:field="*{username}" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3" sec:authorize="hasRole('ADMIN')">
+                        <label class="form-label text-danger fw-bold">User Role (Admin Only)</label>
+                        <select th:field="*{role}" class="form-select">
+                            <option value="USER">User</option>
+                            <option value="ADMIN">Admin</option>
+                        </select>
                     </div>
 
                     <div class="modal-footer">

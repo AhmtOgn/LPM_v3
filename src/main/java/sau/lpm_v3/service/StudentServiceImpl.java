@@ -33,17 +33,24 @@ public class StudentServiceImpl implements StudentService {
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorMessages.ERROR_STUDENT_NOT_FOUND + ": " + id)).viewAsStudentDTO();
     }
 
-    public Student getStudentEntityById(Long id) {
-        return studentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorMessages.ERROR_STUDENT_NOT_FOUND + ": " + id));
-    }
-
     public List<StudentDTO> getAllStudents() {
         return studentRepository.findAll().stream().map(Student::viewAsStudentDTO).toList();
     }
 
+    @Override
+    public List<StudentDTO> getAllStudentsFiltered(boolean isAdmin, String username) {
+        if (isAdmin) {
+            // Admin her şeyi görür [cite: 11]
+            return studentRepository.findAll().stream()
+                    .map(Student::viewAsStudentDTO).toList();
+        } else {
+            // User sadece kendini görür [cite: 12]
+            Student student = studentRepository.findByUsername(username);
+            return (student != null) ? List.of(student.viewAsStudentDTO()) : List.of();
+        }
+    }
+
     public StudentDTO createStudent(StudentDTO studentDto) {
-        // Convert DTO to Entity internally
         Student student = studentDto.toEntity();
 
         if (studentRepository.findById(student.getId()).isPresent()) {
@@ -53,11 +60,9 @@ public class StudentServiceImpl implements StudentService {
         student.setPassword(passwordEncoder.encode(studentDto.getPassword()));
 
         if (studentDto.getImageFile() != null && !studentDto.getImageFile().isEmpty()) {
-            // Dosyayı kaydet ve dönen ismi al
             String savedFileName = fileStorageService.saveFile(studentDto.getImageFile());
 
             if (savedFileName != null) {
-                // Başına /images/ ekleyerek kaydediyoruz ki HTML'de kolay çağıralım
                 student.setImageURL("/images/" + savedFileName);
                 log.info("Student [{}] profile picture path set to: [{}]", student.getUsername(), student.getImageURL());
             }
@@ -76,22 +81,36 @@ public class StudentServiceImpl implements StudentService {
         return savedStudent.viewAsStudentDTO();
     }
 
-    public StudentDTO updateStudent(Long id, StudentDTO studentDto) {
-        // Convert DTO to Entity internally
-        Student student = studentDto.toEntity();
+    @Override
+    public StudentDTO updateStudent(Long id, StudentDTO studentDto, boolean isAdmin, String currentUsername) {
+        Student existingStudent = studentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Öğrenci bulunamadı: " + id));
 
-        studentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorMessages.ERROR_STUDENT_NOT_FOUND + ": " + id));
-
-        student.setId(id);
-
-        if (studentDto.getImageFile() != null && !studentDto.getImageFile().isEmpty()) {
-            // Yeni resim yüklendi: Eskisini (isteğe bağlı) sil ve yenisini kaydet
-            String newFileName = fileStorageService.saveFile(studentDto.getImageFile());
-            student.setImageURL("/images/" + newFileName);
-            log.info("Image updated for student: [{}]", student.getUsername());
+        // GÜVENLİK KONTROLÜ: Admin değilse ve başkasını güncelliyorsa engelle
+        if (!isAdmin && !existingStudent.getUsername().equals(currentUsername)) {
+            throw new RuntimeException("Yetkisiz işlem! Sadece kendi profilinizi güncelleyebilirsiniz.");
         }
-        return studentRepository.save(student).viewAsStudentDTO();
+
+        // Bilgileri aktar
+        existingStudent.setName(studentDto.getName());
+        existingStudent.setDepartment(studentDto.getDepartment());
+
+        // ROL KORUMASI: Sadece Admin rol değiştirebilir [cite: 11]
+        if (isAdmin && studentDto.getRole() != null) {
+            existingStudent.setRole(studentDto.getRole());
+        }
+
+        // Resim işlemleri (mevcut mantığın devamı) [cite: 16]
+        if (studentDto.getImageFile() != null && !studentDto.getImageFile().isEmpty()) {
+            String savedFileName = fileStorageService.saveFile(studentDto.getImageFile());
+            existingStudent.setImageURL("/images/" + savedFileName);
+        }
+
+        // Yeni kayıt logu (İşlemi yapanın detayıyla) [cite: 14]
+        log.info("Student [{}] updated by [{}]. Role: [{}]",
+                existingStudent.getUsername(), currentUsername, existingStudent.getRole());
+
+        return studentRepository.save(existingStudent).viewAsStudentDTO();
     }
 
     public void deleteStudent(Long id) {
