@@ -14,8 +14,11 @@
 
 <!-- Card beginning -->
 <div class="card mx-auto mt-5" style="max-width: 1000px;">
-    <div class="card-header">
+    <div class="card-header" sec:authorize="hasRole('ADMIN')">
         All Students
+    </div>
+    <div class="card-header" sec:authorize="hasRole('USER')">
+        My Profile
     </div>
     <div class="card-body">
         <button type="button" onclick="AddStudent()" class="w-100 btn btn-md btn-outline-primary"

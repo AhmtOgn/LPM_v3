@@ -1,5 +1,6 @@
 package sau.lpm_v3.controller;
 
+import org.springframework.security.core.Authentication;
 import sau.lpm_v3.dtos.ReservationDTO;
 import sau.lpm_v3.service.PlaceService;
 import sau.lpm_v3.service.ReservationService;
@@ -29,78 +30,69 @@ public class ReservationController {
     }
 
     @GetMapping("/all")
-    public String getAllReservations(Model model) {
-        List<ReservationDTO> reservationDtos = reservationService.getAllReservations();
-        model.addAttribute("reservations", reservationDtos);
+    public String getAllReservations(Model model, Authentication auth) {
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        model.addAttribute("reservations", reservationService.getAllReservations(isAdmin, auth.getName()));
         return "reservations/all";
     }
 
     @GetMapping("/{id}")
-    public String getReservation(@PathVariable Long id, Model model) {
-        model.addAttribute("reservation", reservationService.getReservationById(id));
+    public String getReservation(@PathVariable Long id, Model model, Authentication auth) {
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        // Güvenli çekme: Sadece kendi rezervasyonunu veya Admin herkesinkini görebilir
+        ReservationDTO reservation = reservationService.getReservationById(id, isAdmin, auth.getName());
+
+        model.addAttribute("reservation", reservation);
         return "reservations/_show";
     }
 
-    @GetMapping(value = "/add")
-    public String addReservation(Model model) {
+    @GetMapping("/add")
+    public String addReservation(Model model, Authentication auth) {
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
         model.addAttribute("reservation", new ReservationDTO());
-        model.addAttribute("student", studentService.getAllStudents());
-        model.addAttribute("place", placeService.getAllPlaces());
+        model.addAttribute("places", placeService.getAllPlaces());
+        if (isAdmin) {
+            model.addAttribute("students", studentService.getAllStudents(true, auth.getName()));
+        }
         return "reservations/_add";
     }
 
-    @PostMapping(value = "add")
-    public String addReservation(@ModelAttribute ReservationDTO reservationDto,
-                                 @RequestParam Long studentId,
-                                 @RequestParam Long placeId) {
-        reservationDto.setStudentDto(studentService.getStudentById(studentId));
-        reservationDto.setPlaceDto(placeService.getPlaceById(placeId));
-
-        // Yeni kayıtta müsaitlik durumunu otomatik false (rezerve edildi) yapıyoruz
-        reservationDto.setReserved(true);
-
-        // Logs when add a new entity
-        // It is going to add USER DETAILS who performed to action
-        logger.info("A new Reservation that ID is [{}] ADDED.", reservationDto.getId());
-
-        // Converting operating made internally
-        reservationService.createReservation(reservationDto);
+    @PostMapping("/add")
+    public String addReservation(@ModelAttribute ReservationDTO dto, Authentication auth) {
+        reservationService.createReservation(dto, auth);
         return "redirect:/reservation/all";
     }
 
     @GetMapping("/update/{id}")
-    public String updateReservation(@PathVariable Long id, Model model) {
-        // Already getReservationById converts DTO
-        model.addAttribute("reservation", reservationService.getReservationById(id));
-        model.addAttribute("student", studentService.getAllStudents());
-        model.addAttribute("place", placeService.getAllPlaces());
+    public String updateReservation(@PathVariable Long id, Model model, Authentication auth) {
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        model.addAttribute("reservation", reservationService.getReservationById(id, isAdmin, auth.getName()));
+        model.addAttribute("places", placeService.getAllPlaces());
         return "reservations/_update";
     }
 
     @PostMapping("/update/{id}")
     public String updateReservation(@PathVariable Long id,
-                                    @ModelAttribute ReservationDTO reservationDto,
-                                    @RequestParam Long studentId,
-                                    @RequestParam Long placeId) {
-        // Logs when update an entity
-        // It is going to add USER DETAILS who performed to action
-        logger.info("Reservation that ID is [{}] UPDATED", reservationDto.getId());
-
-        reservationDto.setStudentDto(studentService.getStudentById(studentId));
-        reservationDto.setPlaceDto(placeService.getPlaceById(placeId));
-        reservationDto.setId(id); // ID'yi URL'den güvenli şekilde alıp atıyoruz
-        reservationService.updateReservation(id, reservationDto);
+                                    @ModelAttribute ReservationDTO dto,
+                                    Authentication auth) {
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        dto.setId(id); // URL'den gelen güvenli ID
+        reservationService.updateReservation(id, dto, isAdmin, auth.getName());
         return "redirect:/reservation/all";
     }
 
-    @DeleteMapping("/delete/{id}")
+    @DeleteMapping("/cancel/{id}")
     @ResponseBody
-    public ResponseEntity<String> deleteReservation(@PathVariable Long id) {
-        // Logs when delete an entity
-        // It is going to add USER DETAILS who performed to action
-        logger.warn("Reservation that ID is [{}] DELETED", id);
-
-        reservationService.deleteReservation(id);
-        return new ResponseEntity<>(HttpStatus.OK);
+    public ResponseEntity<Void> cancel(@PathVariable Long id, Authentication auth) {
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        reservationService.cancelReservation(id, isAdmin, auth.getName());
+        return ResponseEntity.ok().build();
     }
 }

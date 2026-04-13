@@ -1,5 +1,10 @@
 package sau.lpm_v3.service;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.server.ResponseStatusException;
 import sau.lpm_v3.dtos.ReservationDTO;
 import sau.lpm_v3.exception.ErrorMessages;
 import sau.lpm_v3.exception.ResourceAlreadyExistsException;
@@ -10,75 +15,132 @@ import sau.lpm_v3.repository.ReservationRepository;
 import sau.lpm_v3.repository.StudentRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@Slf4j
+@RequiredArgsConstructor
 public class ReservationServiceImpl implements ReservationService {
     private final ReservationRepository reservationRepository;
     private final StudentRepository studentRepository;
     private final PlaceRepository placeRepository;
 
-    public ReservationServiceImpl(ReservationRepository reservationRepository, StudentRepository studentRepository, PlaceRepository placeRepository) {
-        this.reservationRepository = reservationRepository;
-        this.studentRepository = studentRepository;
-        this.placeRepository = placeRepository;
+    @Override
+    public ReservationDTO getReservationById(Long id, boolean isAdmin, String currentUsername) {
+        Reservation res = reservationRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        if (!isAdmin && !res.getStudent().getUsername().equals(currentUsername)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+        return res.viewAsReservationDTO();
     }
 
     @Override
-    public ReservationDTO getReservationById(Long id) {
-        return reservationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorMessages.ERROR_RESERVATION_NOT_FOUND + ": " + id)).viewAsReservationDTO();
+    public List<ReservationDTO> getAllReservations(boolean isAdmin, String username) {
+        List<Reservation> reservations;
+        if (isAdmin) {
+            reservations = reservationRepository.findAll();
+        } else {
+            reservations = reservationRepository.findByStudentUsername(username);
+        }
+
+        return reservations.stream()
+                .map(Reservation::viewAsReservationDTO)
+                .sorted((r1, r2) -> r2.getStartTime().compareTo(r1.getStartTime())) // Yeniden eskiye sırala
+                .toList();
     }
 
     @Override
-    public List<ReservationDTO> getAllReservations() {
-        return reservationRepository.findAll().stream().map(Reservation::viewAsReservationDTO).toList();
-    }
+    public ReservationDTO createReservation(ReservationDTO dto, Authentication auth) {
+        String currentUsername = auth.getName();
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
-    @Override
-    public ReservationDTO createReservation(ReservationDTO reservationDto) {
-        // Convert DTO to Entity internally
-        Reservation reservation = reservationDto.toEntity();
+        // 1. Rol Kontrolü: User sadece kendi adına yapabilir
+        if (!isAdmin) {
+            dto.setStudentId(studentRepository.findByUsername(currentUsername).getId());
+        }
 
-        // BUG FIX: Student ve Place entity'lerini repository'den çekip ilişkileri kur
-        Student student = studentRepository.findById(reservationDto.getStudentDto().getId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Student not found: " + reservationDto.getStudentDto().getId()));
-        Place place = placeRepository.findById(reservationDto.getPlaceDto().getId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Place not found: " + reservationDto.getPlaceDto().getId()));
+        // 2. Zaman Geçerliliği: Geçmişe rezervasyon yapılamaz
+        if (dto.getStartTime().isBefore(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Geçmiş bir zamana rezervasyon yapılamaz.");
+        }
 
-        reservation.setStudent(student);
-        reservation.setPlace(place);
+        // 3. Tek Gün Kontrolü: Başlangıç ve bitiş aynı gün olmalı
+        if (!dto.getStartTime().toLocalDate().equals(dto.getEndTime().toLocalDate())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rezervasyon aynı gün içerisinde başlayıp bitmelidir.");
+        }
 
+        // 4. Günlük Limit Kontrolü
+        if (reservationRepository.hasUserReachedDailyLimit(dto.getStudentId(), dto.getStartTime().toLocalDate())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Günde sadece 1 rezervasyon hakkınız bulunmaktadır.");
+        }
+
+        // 5. Çakışma Kontrolü
+        if (reservationRepository.isPlaceOccupied(dto.getPlaceId(), dto.getStartTime(), dto.getEndTime())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Seçilen koltuk bu saatler arasında doludur.");
+        }
+
+        Reservation reservation = dto.toEntity();
+        reservation.setStudent(studentRepository.findById(dto.getStudentId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Öğrenci bulunamadı")));
+
+        reservation.setPlace(placeRepository.findById(dto.getPlaceId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mekan bulunamadı")));
+        reservation.setCancelled(false);
+
+        log.info("RESERVATION: User [{}] reserved Place [{}]", currentUsername, dto.getPlaceId());
         return reservationRepository.save(reservation).viewAsReservationDTO();
     }
 
     @Override
-    public ReservationDTO updateReservation(Long id, ReservationDTO reservationDto) {
-        reservationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        ErrorMessages.ERROR_RESERVATION_NOT_FOUND + ": " + id));
+    public ReservationDTO updateReservation(Long id, ReservationDTO dto, boolean isAdmin, String currentUsername) {
+        Reservation existing = reservationRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rezervasyon bulunamadı."));
 
-        Reservation reservation = reservationDto.toEntity();
-        reservation.setId(id); // URL'den gelen güvenli ID
+        // Yetki: Admin değilse ve sahibi değilse reddet
+        if (!isAdmin && !existing.getStudent().getUsername().equals(currentUsername)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bu rezervasyonu düzenleyemezsiniz.");
+        }
 
-        Student student = studentRepository.findById(reservationDto.getStudentDto().getId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Student not found: " + reservationDto.getStudentDto().getId()));
-        Place place = placeRepository.findById(reservationDto.getPlaceDto().getId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Place not found: " + reservationDto.getPlaceDto().getId()));
+        // Geçmiş rezervasyon düzenlenemez
+        if (existing.getEndTime().isBefore(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Geçmiş rezervasyonlar değiştirilemez.");
+        }
 
-        reservation.setStudent(student);
-        reservation.setPlace(place);
+        // Çakışma Kontrolü (Kendi ID'si hariç)
+        boolean isOccupied = reservationRepository.isPlaceOccupiedExcludingSelf(
+                dto.getPlaceId(), dto.getStartTime(), dto.getEndTime(), id);
 
-        return reservationRepository.save(reservation).viewAsReservationDTO();
+        if (isOccupied) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Seçilen koltuk bu saatlerde başka bir rezervasyonla çakışıyor.");
+        }
+
+        existing.setPlace(placeRepository.findById(dto.getPlaceId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mekan bulunamadı")));
+        existing.setStartTime(dto.getStartTime());
+        existing.setEndTime(dto.getEndTime());
+
+        log.info("RESERVATION UPDATED: ID [{}] by user [{}]", id, currentUsername);
+        return reservationRepository.save(existing).viewAsReservationDTO();
     }
 
-    public void deleteReservation(Long id) {
-        reservationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorMessages.ERROR_RESERVATION_NOT_FOUND + ": " + id));
-        reservationRepository.deleteById(id);
+    @Override
+    public void cancelReservation(Long id, boolean isAdmin, String currentUsername) {
+        Reservation res = reservationRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        if (!isAdmin && !res.getStudent().getUsername().equals(currentUsername)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
+        if (res.getStartTime().isBefore(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Geçmiş rezervasyonlar üzerinde işlem yapılamaz.");
+        }
+
+        res.setCancelled(true);
+        reservationRepository.save(res);
+        log.warn("CANCELLED: Reservation [{}] by [{}]", id, currentUsername);
     }
 }

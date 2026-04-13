@@ -1,43 +1,52 @@
 package sau.lpm_v3.model;
 
-import sau.lpm_v3.dtos.*;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import sau.lpm_v3.dtos.StudentDTO;
-
+import lombok.*;
+import sau.lpm_v3.dtos.ReservationDTO;
 import java.time.LocalDateTime;
 
+@Entity
+@Table(name = "reservation")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
+@Builder
 public class Reservation {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
-    @Column(name="date")
-    private LocalDateTime date;
-    @Column(name="duration")
-    private LocalDateTime duration;
-    @Column(name="is_reserved")
-    private boolean isReserved = false;
-    @ManyToOne(fetch = FetchType.EAGER)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false)
     private Student student;
-    @ManyToOne(fetch = FetchType.EAGER)
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "place_id", nullable = false)
     private Place place;
-    
+
+    @Column(nullable = false)
+    private LocalDateTime startTime;
+
+    @Column(nullable = false)
+    private LocalDateTime endTime;
+
+    @Column(nullable = false)
+    private boolean isCancelled = false;
+
     public ReservationDTO viewAsReservationDTO() {
-        StudentDTO studentDto = (student != null) ? student.viewAsStudentDTO() : null;
-        PlaceDTO placeDto = (place != null) ? place.viewAsPlaceDTO() : null;
-
-        return new ReservationDTO(id, date, duration, isReserved, studentDto, placeDto);
+        String builtPlaceName = (place != null)
+                ? place.getBuilding() + " - " + place.getRoom()
+                : null;
+        return ReservationDTO.builder()
+                .id(this.id)
+                .studentId(this.student != null ? this.student.getId() : null)
+                .studentName(this.student != null ? this.student.getName() : null)
+                .studentUsername(this.student != null ? this.student.getUsername() : null)
+                .placeId(this.place != null ? this.place.getId() : null)
+                .placeName(builtPlaceName)
+                .startTime(this.startTime)
+                .endTime(this.endTime)
+                .isCancelled(this.isCancelled)
+                .build();
     }
-
-    //<form th:action="@{/reservation/update/{id}(id=${reservation.id})}" th:field="${reservation}" method="post">
-    //                    <input type="hidden" th:field="*{id}" />
 }

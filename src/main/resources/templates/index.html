@@ -44,10 +44,10 @@
             <p>Where do you want to go?</p>
 
             <div class="d-grid gap-2 d-md-block mt-3">
+                <a th:href="@{/student/all}" class="btn btn-outline-danger btn-lg m-1" sec:authorize="hasRole('ADMIN')">Student Management</a>
+                <a th:href="@{/student/all}" class="btn btn-outline-danger btn-lg m-1" sec:authorize="hasRole('USER')">My Profile</a>
                 <a th:href="@{/place/all}" class="btn btn-outline-primary btn-lg m-1">Places</a>
                 <a th:href="@{/reservation/all}" class="btn btn-outline-success btn-lg m-1">Reservations</a>
-
-                <a th:href="@{/student/all}" class="btn btn-outline-danger btn-lg m-1" sec:authorize="hasRole('ADMIN')">Student Management</a>
             </div>
 
             <hr class="mt-4">
@@ -59,7 +59,7 @@
 </div>
 
 <footer class="mt-5 text-center text-muted">
-    <p><small>&copy; 2026 SWE 212 Project - Ahmet Oğan</small></p>
+    <p><small>&copy; 2026 Library Place Management - Sakarya University</small></p>
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

@@ -1,44 +1,49 @@
 package sau.lpm_v3.dtos;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import sau.lpm_v3.model.*;
-
+import lombok.*;
+import org.springframework.format.annotation.DateTimeFormat;
+import sau.lpm_v3.model.Reservation;
 import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ReservationDTO {
-    private long id;
-    private LocalDateTime date;
-    private LocalDateTime duration;
-    @JsonProperty("reserved")
-    private boolean isReserved;
 
-    private StudentDTO studentDto;
-    private PlaceDTO placeDto;
+    private Long id;
+    private Long studentId;
+    private Long placeId;
 
-    public ReservationDTO(long id, LocalDateTime date, LocalDateTime duration, boolean isReserved, StudentDTO studentDto, PlaceDTO placeDto) {
-        this.id = id;
-        this.date = date;
-        this.duration = duration;
-        this.isReserved = isReserved;
-        this.studentDto = studentDto;
-        this.placeDto = placeDto;
-        // FK id'leri de doldur (update formunda seçili gelmesi için)
-        // if (studentDto != null) this.studentId = studentDto.getId();
-        // if (placeDto != null) this.placeId = placeDto.getId();
+    private String studentName;
+    private String studentUsername;
+    private String placeName;
+
+    @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm")
+    private LocalDateTime startTime;
+
+    @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm")
+    private LocalDateTime endTime;
+
+    private boolean isCancelled;
+
+    public String getDynamicStatus() {
+        if (isCancelled) return "Cancelled";
+
+        LocalDateTime now = LocalDateTime.now();
+        if (endTime.isBefore(now)) return "Past";
+        if (startTime.isAfter(now)) return "Oncoming";
+
+        return "Continues";
     }
 
     public Reservation toEntity() {
-        Reservation reservation = new Reservation();
-        reservation.setId(this.id);
-        reservation.setDate(this.date);
-        reservation.setDuration(this.duration);
-        reservation.setReserved(this.isReserved);
-        // Student ve Place → ReservationServiceImpl içinde repository'den çekilip set edilir
-        return reservation;
+        Reservation res = new Reservation();
+        res.setId(this.id);
+        res.setStartTime(this.startTime);
+        res.setEndTime(this.endTime);
+        res.setCancelled(this.isCancelled);
+
+        return res;
     }
 }

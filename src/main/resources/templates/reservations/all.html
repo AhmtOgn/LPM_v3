@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:width="http://www.w3.org/1999/xhtml">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
@@ -8,51 +8,66 @@
 </head>
 <body>
 <div id="modal-tag"></div>
-<div th:replace="~{fragments/navbar :: navbar}"></div>
-<!-- Card beginning -->
-<div class="card mx-auto mt-5" style="max-width: 1000px;">
-    <div class="card-header">
-        All Reservations
-    </div>
+
+<div class="card mx-auto mt-5" style="max-width: 1100px;">
+    <div class="card-header">All Reservations</div>
     <div class="card-body">
-        <button type="button" onclick="AddReservation()" class="w-100 btn btn-md btn-outline-primary"
-                data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Add Customer">
-            <i class="bi bi-person-plus-fill"></i>&nbsp;Add Reservation
+        <button type="button" onclick="AddReservation()"
+                class="w-100 btn btn-outline-primary mb-3">
+            <i class="bi bi-calendar-plus-fill"></i>&nbsp;Add Reservation
         </button>
 
-        <table class="table table-striped table-hover">
+        <table class="table table-striped table-hover align-middle">
             <thead>
             <tr>
                 <th>ID</th>
-                <th>STUDENT</th>
-                <th>PLACE</th>
-                <th>START DATE</th>
-                <th>END DATE</th>
-                <th>STATUS</th>
-                <th>OPERATIONS</th>
+                <th>Student</th>
+                <th>Place</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Status</th>
+                <th>Operations</th>
             </tr>
             </thead>
             <tbody>
             <tr th:each="r : ${reservations}">
                 <td th:text="${r.id}"></td>
-                <td th:text="${r.studentDto != null ? r.studentDto.name : ''}"></td>
-                <td th:text="${r.placeDto != null ? r.placeDto.building + ' - ' + r.placeDto.room: ''}"></td>
-                <td th:text="${r.date}"></td>
-                <td th:text="${r.duration}"></td>
+
+                <!-- BUG FIX: DTO artık flat — r.studentDto.name → r.studentName -->
+                <td th:text="${r.studentName != null ? r.studentName : '-'}"></td>
+
+                <!-- BUG FIX: r.placeDto.building → r.placeName -->
+                <td th:text="${r.placeName != null ? r.placeName : '-'}"></td>
+
+                <td th:text="${r.startTime}"></td>
+                <td th:text="${r.endTime}"></td>
+
                 <td>
-                    <i th:if="${!r.reserved}" class="bi bi-check-circle-fill text-success fs-5" title="Available"></i>
-                    <i th:if="${r.reserved}" class="bi bi-x-circle-fill text-danger fs-5" title="Reserved"></i>
+                    <!-- getDynamicStatus() → Thymeleaf'te "dynamicStatus" olarak erişilir -->
+                    <span th:switch="${r.dynamicStatus}">
+                        <span th:case="'Cancelled'" class="badge bg-secondary">Cancelled</span>
+                        <span th:case="'Past'"      class="badge bg-dark">Past</span>
+                        <span th:case="'Oncoming'"  class="badge bg-primary">Oncoming</span>
+                        <span th:case="'Continues'" class="badge bg-success">In Progress</span>
+                        <span th:case="*"           class="badge bg-light text-dark" th:text="${r.dynamicStatus}"></span>
+                    </span>
                 </td>
+
                 <td>
-                    <a href="#" th:onclick="'javascript:Details('+${r.id}+');'" class="btn btn-info"
-                       data-bs-toggle="tooltip" data-bs-placement="bottom" title="Details"><i
-                            class="bi bi-info-circle"></i></a>
-                    <a href="#" th:onclick="'javascript:Update('+${r.id}+');'" class="btn btn-warning"
-                       data-bs-toggle="tooltip" data-bs-placement="bottom" title="Update"><i
-                            class="bi bi-pencil"></i></a>
-                    <a href="#" th:onclick="'javascript:Delete('+${r.id}+');'" class="btn btn-danger"
-                       data-bs-toggle="tooltip" data-bs-placement="bottom" title="Delete"><i
-                            class="bi bi-trash"></i></a>
+                    <a href="#" th:onclick="'Details(' + ${r.id} + ')'"
+                       class="btn btn-sm btn-info" title="Details">
+                        <i class="bi bi-info-circle"></i>
+                    </a>
+                    <a href="#" th:if="${r.dynamicStatus == 'Oncoming'}"
+                       th:onclick="'Update(' + ${r.id} + ')'"
+                       class="btn btn-sm btn-warning" title="Update">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <a href="#" th:if="${r.dynamicStatus == 'Oncoming'}"
+                       th:onclick="'Cancel(' + ${r.id} + ')'"
+                       class="btn btn-sm btn-danger" title="Cancel">
+                        <i class="bi bi-x-circle"></i>
+                    </a>
                 </td>
             </tr>
             </tbody>
@@ -64,65 +79,42 @@
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
 <script>
-    // Tooltip initialize
-    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
-    const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
-
     function AddReservation() {
-        console.log('Adding Reservation');
         $.ajax({
-            url: '/reservation/add',
-            type: 'get',
+            url: '/reservation/add', type: 'get',
             success: function (data) {
                 $('#modal-tag').html(data);
                 $('#modal-tag').find('.modal').modal('show');
             },
-            error: function () {
-                alert("Problem add user");
-            }
+            error: function () { alert("Could not open Add Reservation form."); }
         });
     }
-
     function Details(id) {
         $.ajax({
-            url: '/reservation/'+ id,
-            type: 'get',
+            url: '/reservation/' + id, type: 'get',
             success: function (data) {
                 $('#modal-tag').html(data);
                 $('#modal-tag').find('.modal').modal('show');
             },
-            error: function () {
-                alert("Problem on details!");
-            }
+            error: function () { alert("Could not load reservation details."); }
         });
     }
-
     function Update(id) {
         $.ajax({
-            url: '/reservation/update/'+id,
-            type: 'get',
+            url: '/reservation/update/' + id, type: 'get',
             success: function (data) {
                 $('#modal-tag').html(data);
                 $('#modal-tag').find('.modal').modal('show');
             },
-            error: function () {
-                alert("Problem update");
-            }
+            error: function () { alert("Could not open Update form."); }
         });
     }
-
-    function Delete(id) {
-        if (!confirm("The selected user will be deleted! \nAre you sure?")) return;
+    function Cancel(id) {
+        if (!confirm("This reservation will be cancelled!\nAre you sure?")) return;
         $.ajax({
-            url: '/reservation/delete/' + id,
-            type: 'delete',
-            success: function (data) {
-                //alert("Ok");
-                window.location.replace("/reservation/all");
-            },
-            error: function (r) {
-                alert("Delete user problem: " + r.responseText);
-            }
+            url: '/reservation/cancel/' + id, type: 'delete',
+            success: function () { window.location.replace("/reservation/all"); },
+            error: function (r) { alert("Cancel failed: " + r.responseText); }
         });
     }
 </script>
