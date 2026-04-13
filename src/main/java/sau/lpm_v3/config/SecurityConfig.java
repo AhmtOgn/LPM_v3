@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
@@ -12,22 +13,44 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http.csrf(csrf -> csrf.disable());
         http
-                // CSRF'i kapatıyoruz ki POST/Upload işlemleri engellenmesin
-                .csrf(csrf -> csrf.disable())
-
                 .authorizeHttpRequests(auth -> auth
-                        // "anyRequest().permitAll()" diyerek tüm kapıları açıyoruz
-                        .anyRequest().permitAll()
+                        .requestMatchers("/", "/login", "/images/**", "/css/**", "/js/**").permitAll()
+                        .requestMatchers("/student/all").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/student/add", "/student/update/**", "/student/update").hasRole("ADMIN")
+                        .anyRequest().authenticated()
                 )
 
-                // Form login ve logout'u şimdilik yorum satırına alabilirsin
-                /*.formLogin(form -> form.permitAll())*/
+                .formLogin(login -> login
+                        .loginPage("/login")
+                        .successHandler((request, response, authentication) -> {
+                            // Güvenli Yol: Kullanıcının yetkileri içinde "ROLE_ADMIN" var mı diye bakıyoruz
+                            boolean isAdmin = authentication.getAuthorities().stream()
+                                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
 
-                // H2-Console veya diğer frame yapıları için (gerekirse)
-                .headers(headers -> headers.frameOptions(frame -> frame.disable()));
+                            if (isAdmin) {
+                                response.sendRedirect("/student/add"); // Admin ise ekleme sayfasına
+                            } else {
+                                response.sendRedirect("/student/all"); // User ise listeleme sayfasına
+                            }
+                        })
+                        .permitAll()
+                )
 
+                .exceptionHandling(exception -> exception
+                        .accessDeniedPage("/access-denied")
+                )
+
+                .logout(logout -> logout
+                        .logoutUrl("/logout")
+                        .logoutSuccessUrl("/")
+                        .clearAuthentication(true)
+                        .deleteCookies("JSESSIONID")
+                        .invalidateHttpSession(true)
+                        .permitAll()
+                );
         return http.build();
     }
 
@@ -35,48 +58,4 @@ public class SecurityConfig {
     public BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
-    /*
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                // 1. Yetkilendirme Kuralları (Authorization)
-                .authorizeHttpRequests(auth -> auth
-                        // Statik kaynaklar ve giriş/kayıt sayfaları herkese açık
-                        .requestMatchers("/login", "/register", "/css/**", "/js/**", "/images/**", "/static/**").permitAll()
-
-                        // Admin'e özel kritik işlemler (Ekleme, Silme, Güncelleme)
-                        .requestMatchers("/student/add/**", "/student/delete/**", "/student/update/**").hasRole("ADMIN")
-                        .requestMatchers("/place/add/**", "/place/delete/**", "/place/update/**").hasRole("ADMIN")
-                        .requestMatchers("/reservation/delete/**").hasRole("ADMIN")
-
-                        // Geri kalan her şey (Görüntüleme vb.) giriş yapmış kullanıcıya açık
-                        .anyRequest().authenticated()
-                )
-
-                // 2. Giriş (Login) Yapılandırması
-                .formLogin(form -> form
-                        .loginPage("/login")
-                        .defaultSuccessUrl("/", true)
-                        .permitAll()
-                )
-
-
-                // 3. Çıkış (Logout) Yapılandırması
-                .logout(logout -> logout
-                        .logoutSuccessUrl("/login?logout")
-                        .permitAll()
-                )
-
-                // 4. Yetkisiz Erişim Hatası (403 Forbidden)
-                .exceptionHandling(exception -> exception
-                        .accessDeniedPage("/403")
-                )
-
-                // 5. CORS Politikası (Ödev gereği belirtilmeli)
-                .cors(cors -> cors.configure(http));
-
-        return http.build();
-    }
-     */
 }

@@ -82,7 +82,15 @@ public class StudentServiceImpl implements StudentService {
 
         studentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorMessages.ERROR_STUDENT_NOT_FOUND + ": " + id));
+
         student.setId(id);
+
+        if (studentDto.getImageFile() != null && !studentDto.getImageFile().isEmpty()) {
+            // Yeni resim yüklendi: Eskisini (isteğe bağlı) sil ve yenisini kaydet
+            String newFileName = fileStorageService.saveFile(studentDto.getImageFile());
+            student.setImageURL("/images/" + newFileName);
+            log.info("Image updated for student: [{}]", student.getUsername());
+        }
         return studentRepository.save(student).viewAsStudentDTO();
     }
 
