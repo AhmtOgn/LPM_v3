@@ -8,10 +8,15 @@
             </div>
             <div class="modal-body">
 
-                <form th:action="@{/student/update}" th:object="${student}" method="post">
+                <form th:action="@{/student/update}" th:object="${student}" method="post" enctype="multipart/form-data">
 
                     <!-- Passes ID hiddenly -->
                     <input type="hidden" th:field="*{id}" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Update Profile Picture</label>
+                        <input class="form-control" type="file" th:field="*{imageFile}" accept="image/*">
+                    </div>
 
                     <div class="mb-3">
                         <label class="form-label">Student Name</label>
@@ -22,6 +27,11 @@
                     <div class="mb-3">
                         <label class="form-label">Depatment</label>
                         <input type="text" th:field="*{department}" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Usarname</label>
+                        <input type="text" th:field="*{username}" class="form-control" required>
                     </div>
 
                     <div class="modal-footer">

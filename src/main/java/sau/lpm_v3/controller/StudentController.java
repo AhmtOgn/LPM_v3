@@ -1,5 +1,7 @@
 package sau.lpm_v3.controller;
 
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import sau.lpm_v3.dtos.StudentDTO;
 import sau.lpm_v3.service.StudentService;
 import org.slf4j.Logger;
@@ -13,11 +15,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @Controller
+@Slf4j
 @RequestMapping("/student")
 public class StudentController {
 
-    //For Logging Requirement
-    private static final Logger logger = LoggerFactory.getLogger(StudentController.class);
     private final StudentService studentService;
 
     public StudentController(StudentService studentService) {
@@ -43,11 +44,11 @@ public class StudentController {
         return "students/_add";
     }
 
-    @PostMapping(value = "/add")
+    @PostMapping(value = "/add", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public String addStudent(@ModelAttribute("student") StudentDTO studentDto) {
-        // Logs when add a new entity
+
         // It is going to add USER DETAILS who performed to action
-        logger.info("A new Student [{}] ADDED.", studentDto.getName());
+        log.info("A new Student [{}] ADDED.", studentDto.getName());
 
         // Converting operating made internally
         studentService.createStudent(studentDto);
@@ -64,9 +65,9 @@ public class StudentController {
 
     @PostMapping("/update")
     public String updateStudent(@ModelAttribute("student") StudentDTO studentDto) {
-        // Logs when update an entity
+
         // It is going to add USER DETAILS who performed to action
-        logger.info("Student [{}] UPDATED", studentDto.getName());
+        log.info("Student [{}] UPDATED", studentDto.getName());
 
         // Converting operating made internally
         studentService.updateStudent(studentDto.getId(), studentDto);
@@ -75,9 +76,9 @@ public class StudentController {
 
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<String> deleteStudent(@PathVariable Long id) {
-        // Logs when delete an entity
+
         // It is going to add USER DETAILS who performed to action
-        logger.warn("Student [{}] DELETED", studentService.getStudentById(id).getName());
+        log.warn("Student [{}] DELETED", studentService.getStudentById(id).getName());
 
         studentService.deleteStudent(id);
         return new ResponseEntity<>(HttpStatus.OK);

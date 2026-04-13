@@ -9,5 +9,4 @@ public class LpmV3Application {
     public static void main(String[] args) {
         SpringApplication.run(LpmV3Application.class, args);
     }
-
 }

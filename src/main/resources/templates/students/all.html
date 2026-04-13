@@ -23,16 +23,29 @@
             <thead>
             <tr>
                 <th>ID</th>
+                <th>PICTURE</th>
                 <th>NAME</th>
+                <th>USERNAME</th>
                 <th>DEPARTMENT</th>
+                <th>ROLE</th>
                 <th>OPERATIONS</th>
             </tr>
             </thead>
             <tbody>
             <tr th:each="s:${students}">
                 <td th:text="${s.id}"></td>
+                <td>
+                    <img th:src="@{${s.imageURL != null ? s.imageURL : '/images/lpm.png'}}"
+                         class="rounded-circle border"
+                         style="width: 50px; height: 50px; object-fit: cover;">
+                </td>
                 <td th:text="${s.name}"></td>
+                <td th:text="${s.username}"></td>
                 <td th:text="${s.department}"></td>
+                <td>
+                    <span th:class="${s.role.name() == 'ADMIN' ? 'badge bg-primary' : 'badge bg-secondary'}"
+                          th:text="${s.role}"></span>
+                </td>
                 <td>
                     <a href="#" th:onclick="'javascript:Details('+${s.id}+');'" class="btn btn-info"
                        data-bs-toggle="tooltip" data-bs-placement="bottom" title="Details"><i
