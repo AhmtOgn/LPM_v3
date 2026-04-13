@@ -1,4 +1,5 @@
-<div class="modal fade" id="addStudentModal" tabindex="-1" aria-labelledby="addStudentModalLabel" aria-hidden="true">
+<div class="modal fade" id="addStudentModal" tabindex="-1" aria-labelledby="addStudentModalLabel" aria-hidden="true"
+     xmlns:sec="http://www.w3.org/1999/xhtml">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
@@ -26,13 +27,14 @@
                         <input type="password" th:field="*{password}" class="form-control" required>
                     </div>
 
-                    <div class="mb-3">
+                    <div class="mb-3" sec:authorize="hasRole('ADMIN')">
                         <label class="form-label">Role</label>
-                        <select th:field="*{role}" class="form-select" required>
-                            <option th:value="'USER'">User</option>
-                            <option th:value="'ADMIN'">Admin</option>
+                        <select th:field="*{role}" class="form-select">
+                            <option value="USER">User</option>
+                            <option value="ADMIN">Admin</option>
                         </select>
                     </div>
+                    <input type="hidden" sec:authorize="!hasRole('ADMIN')" th:field="*{role}" />
 
                     <div class="mb-3">
                         <label for="name" class="form-label">Student Name</label>

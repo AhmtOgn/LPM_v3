@@ -8,16 +8,16 @@ INSERT INTO place (building, floor, room, seat) VALUES ('C Blok', '3', '301', 20
 -- NOT: Şifrelerin tamamı "123"dür.
 -- Sütunlar: name, department, username, password, role, image_url
 INSERT INTO student (name, department, username, password, role, imageurl)
-VALUES ('Ahmet Oğan', 'Yazılım Mühendisliği', 'admin', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00dmxs.TVuHOn2', 'ADMIN', NULL);
+VALUES ('Ahmet Oğan', 'Yazılım Mühendisliği', 'admin', '$2a$10$dCOCiFA6GdBtZxKpcay2LOxtcUJK/MfBeDK.4dR4wL8AtvPk/2jke', 'ADMIN', NULL);
 
 INSERT INTO student (name, department, username, password, role, imageurl)
-VALUES ('Ahmet Yılmaz', 'Bilgisayar Mühendisliği', 'ahmet123', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00dmxs.TVuHOn2', 'USER', NULL);
+VALUES ('Ahmet Yılmaz', 'Bilgisayar Mühendisliği', 'ahmet123', '$2a$10$dCOCiFA6GdBtZxKpcay2LOxtcUJK/MfBeDK.4dR4wL8AtvPk/2jke', 'USER', NULL);
 
 INSERT INTO student (name, department, username, password, role, imageurl)
-VALUES ('Fatih Demir', 'İnşaat Mühendisliği', 'fatih', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00dmxs.TVuHOn2', 'USER', NULL);
+VALUES ('Fatih Demir', 'İnşaat Mühendisliği', 'fatih', '$2a$10$dCOCiFA6GdBtZxKpcay2LOxtcUJK/MfBeDK.4dR4wL8AtvPk/2jke', 'USER', NULL);
 
 INSERT INTO student (name, department, username, password, role, imageurl)
-VALUES ('Zeynep Kaya', 'Elektrik Mühendisliği', 'zeynep', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00dmxs.TVuHOn2', 'USER', NULL);
+VALUES ('Zeynep Kaya', 'Elektrik Mühendisliği', 'zeynep', '$2a$10$dCOCiFA6GdBtZxKpcay2LOxtcUJK/MfBeDK.4dR4wL8AtvPk/2jke', 'USER', NULL);
 
 -- 3. Reservation (Rezervasyon) Verisi
 -- student_id ve place_id değerlerinin yukarıdaki ID'lerle eşleştiğinden emin olun.

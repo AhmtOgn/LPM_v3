@@ -2,10 +2,11 @@ package sau.lpm_v3.controller;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.Authentication;
 import sau.lpm_v3.dtos.StudentDTO;
+import sau.lpm_v3.model.Student;
+import sau.lpm_v3.repository.StudentRepository;
 import sau.lpm_v3.service.StudentService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -20,15 +21,21 @@ import java.util.List;
 public class StudentController {
 
     private final StudentService studentService;
+    private final StudentRepository studentRepository;
 
-    public StudentController(StudentService studentService) {
+    public StudentController(StudentService studentService, StudentRepository studentRepository) {
         this.studentService = studentService;
+        this.studentRepository = studentRepository;
     }
 
     @GetMapping("all")
-    public String getAllStudents(Model model){
-        List<StudentDTO> studentDtos = studentService.getAllStudents();
-        model.addAttribute("students", studentDtos);
+    public String getAllStudents(Model model, Authentication auth) {
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        // Tüm mantık servisin içinde
+        List<StudentDTO> students = studentService.getAllStudentsFiltered(isAdmin, auth.getName());
+
+        model.addAttribute("students", students);
         return "students/all";
     }
 
@@ -64,13 +71,10 @@ public class StudentController {
 
 
     @PostMapping("/update")
-    public String updateStudent(@ModelAttribute("student") StudentDTO studentDto) {
+    public String updateStudent(@ModelAttribute("student") StudentDTO studentDto, Authentication auth) {
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
-        // It is going to add USER DETAILS who performed to action
-        log.info("Student [{}] UPDATED", studentDto.getName());
-
-        // Converting operating made internally
-        studentService.updateStudent(studentDto.getId(), studentDto);
+        studentService.updateStudent(studentDto.getId(), studentDto, isAdmin, auth.getName());
         return "redirect:/student/all";
     }
 
