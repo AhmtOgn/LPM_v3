@@ -13,7 +13,6 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // /images/** ile başlayan istekleri fiziksel klasöre yönlendir
         registry.addResourceHandler("/images/**")
                 .addResourceLocations("file:" + uploadFolder);
     }

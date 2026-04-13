@@ -6,9 +6,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.server.ResponseStatusException;
 import sau.lpm_v3.dtos.ReservationDTO;
-import sau.lpm_v3.exception.ErrorMessages;
-import sau.lpm_v3.exception.ResourceAlreadyExistsException;
-import sau.lpm_v3.exception.ResourceNotFoundException;
 import sau.lpm_v3.model.*;
 import sau.lpm_v3.repository.PlaceRepository;
 import sau.lpm_v3.repository.ReservationRepository;
@@ -29,118 +26,162 @@ public class ReservationServiceImpl implements ReservationService {
     @Override
     public ReservationDTO getReservationById(Long id, boolean isAdmin, String currentUsername) {
         Reservation res = reservationRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> {
+                    log.warn("RESERVATION NOT FOUND: id=[{}], requestedBy=[{}]", id, currentUsername);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND,
+                            "Reservation not found: " + id);
+                });
 
         if (!isAdmin && !res.getStudent().getUsername().equals(currentUsername)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            log.warn("RESERVATION ACCESS DENIED: id=[{}], owner=[{}], requestedBy=[{}]",
+                    id, res.getStudent().getUsername(), currentUsername);
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "You are not allowed to view this reservation.");
         }
         return res.viewAsReservationDTO();
     }
 
     @Override
     public List<ReservationDTO> getAllReservations(boolean isAdmin, String username) {
-        List<Reservation> reservations;
-        if (isAdmin) {
-            reservations = reservationRepository.findAll();
-        } else {
-            reservations = reservationRepository.findByStudentUsername(username);
-        }
+        List<Reservation> reservations = isAdmin
+                ? reservationRepository.findAll()
+                : reservationRepository.findByStudentUsername(username);
+
+        log.info("RESERVATION LIST: fetched={}, by=[{}], scope=[{}]",
+                reservations.size(), username, isAdmin ? "ALL" : "OWN");
 
         return reservations.stream()
                 .map(Reservation::viewAsReservationDTO)
-                .sorted((r1, r2) -> r2.getStartTime().compareTo(r1.getStartTime())) // Yeniden eskiye sırala
+                .sorted((r1, r2) -> r2.getStartTime().compareTo(r1.getStartTime()))
                 .toList();
     }
 
     @Override
     public ReservationDTO createReservation(ReservationDTO dto, Authentication auth) {
         String currentUsername = auth.getName();
-        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
-        // 1. Rol Kontrolü: User sadece kendi adına yapabilir
         if (!isAdmin) {
             dto.setStudentId(studentRepository.findByUsername(currentUsername).getId());
         }
 
-        // 2. Zaman Geçerliliği: Geçmişe rezervasyon yapılamaz
         if (dto.getStartTime().isBefore(LocalDateTime.now())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Geçmiş bir zamana rezervasyon yapılamaz.");
+            log.warn("RESERVATION CREATE REJECTED (past time): user=[{}], start=[{}]",
+                    currentUsername, dto.getStartTime());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Reservations cannot be made for a past date.");
         }
 
-        // 3. Tek Gün Kontrolü: Başlangıç ve bitiş aynı gün olmalı
         if (!dto.getStartTime().toLocalDate().equals(dto.getEndTime().toLocalDate())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rezervasyon aynı gün içerisinde başlayıp bitmelidir.");
+            log.warn("RESERVATION CREATE REJECTED (multi-day): user=[{}]", currentUsername);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Reservations must start and end on the same day.");
         }
 
-        // 4. Günlük Limit Kontrolü
-        if (reservationRepository.hasUserReachedDailyLimit(dto.getStudentId(), dto.getStartTime().toLocalDate())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Günde sadece 1 rezervasyon hakkınız bulunmaktadır.");
+        if (reservationRepository.hasUserReachedDailyLimit(
+                dto.getStudentId(), dto.getStartTime().toLocalDate())) {
+            log.warn("RESERVATION CREATE REJECTED (daily limit): user=[{}], date=[{}]",
+                    currentUsername, dto.getStartTime().toLocalDate());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "You are only allowed one reservation per day.");
         }
 
-        // 5. Çakışma Kontrolü
-        if (reservationRepository.isPlaceOccupied(dto.getPlaceId(), dto.getStartTime(), dto.getEndTime())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Seçilen koltuk bu saatler arasında doludur.");
+        if (reservationRepository.isPlaceOccupied(
+                dto.getPlaceId(), dto.getStartTime(), dto.getEndTime())) {
+            log.warn("RESERVATION CREATE REJECTED (conflict): user=[{}], place=[{}], start=[{}], end=[{}]",
+                    currentUsername, dto.getPlaceId(), dto.getStartTime(), dto.getEndTime());
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "The selected seat is fully booked during these hours.");
         }
 
         Reservation reservation = dto.toEntity();
         reservation.setStudent(studentRepository.findById(dto.getStudentId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Öğrenci bulunamadı")));
-
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found.")));
         reservation.setPlace(placeRepository.findById(dto.getPlaceId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mekan bulunamadı")));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Place not found.")));
         reservation.setCancelled(false);
 
-        log.info("RESERVATION: User [{}] reserved Place [{}]", currentUsername, dto.getPlaceId());
-        return reservationRepository.save(reservation).viewAsReservationDTO();
+        ReservationDTO saved = reservationRepository.save(reservation).viewAsReservationDTO();
+
+        log.info("RESERVATION CREATED: id=[{}], createdBy=[{}], role=[{}], placeId=[{}], start=[{}], end=[{}]",
+                saved.getId(), currentUsername, isAdmin ? "ADMIN" : "USER",
+                dto.getPlaceId(), dto.getStartTime(), dto.getEndTime());
+
+        return saved;
     }
 
     @Override
-    public ReservationDTO updateReservation(Long id, ReservationDTO dto, boolean isAdmin, String currentUsername) {
+    public ReservationDTO updateReservation(Long id, ReservationDTO dto,
+                                            boolean isAdmin, String currentUsername) {
         Reservation existing = reservationRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rezervasyon bulunamadı."));
+                .orElseThrow(() -> {
+                    log.warn("RESERVATION UPDATE FAILED (not found): id=[{}], by=[{}]", id, currentUsername);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "Reservation not found.");
+                });
 
-        // Yetki: Admin değilse ve sahibi değilse reddet
         if (!isAdmin && !existing.getStudent().getUsername().equals(currentUsername)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bu rezervasyonu düzenleyemezsiniz.");
+            log.warn("RESERVATION UPDATE DENIED: id=[{}], owner=[{}], attemptedBy=[{}]",
+                    id, existing.getStudent().getUsername(), currentUsername);
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Bu rezervasyonu düzenleyemezsiniz.");
         }
 
-        // Geçmiş rezervasyon düzenlenemez
         if (existing.getEndTime().isBefore(LocalDateTime.now())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Geçmiş rezervasyonlar değiştirilemez.");
+            log.warn("RESERVATION UPDATE REJECTED (past): id=[{}], by=[{}]", id, currentUsername);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Past reservations cannot be changed.");
         }
 
-        // Çakışma Kontrolü (Kendi ID'si hariç)
-        boolean isOccupied = reservationRepository.isPlaceOccupiedExcludingSelf(
-                dto.getPlaceId(), dto.getStartTime(), dto.getEndTime(), id);
-
-        if (isOccupied) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Seçilen koltuk bu saatlerde başka bir rezervasyonla çakışıyor.");
+        if (reservationRepository.isPlaceOccupiedExcludingSelf(
+                dto.getPlaceId(), dto.getStartTime(), dto.getEndTime(), id)) {
+            log.warn("RESERVATION UPDATE REJECTED (conflict): id=[{}], place=[{}], by=[{}]",
+                    id, dto.getPlaceId(), currentUsername);
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "The selected seat clashes with another reservation at this time.");
         }
 
         existing.setPlace(placeRepository.findById(dto.getPlaceId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mekan bulunamadı")));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Place not found")));
         existing.setStartTime(dto.getStartTime());
         existing.setEndTime(dto.getEndTime());
 
-        log.info("RESERVATION UPDATED: ID [{}] by user [{}]", id, currentUsername);
-        return reservationRepository.save(existing).viewAsReservationDTO();
+        ReservationDTO updated = reservationRepository.save(existing).viewAsReservationDTO();
+
+        log.info("RESERVATION UPDATED: id=[{}], updatedBy=[{}], role=[{}], newPlace=[{}], start=[{}], end=[{}]",
+                id, currentUsername, isAdmin ? "ADMIN" : "USER",
+                dto.getPlaceId(), dto.getStartTime(), dto.getEndTime());
+
+        return updated;
     }
 
     @Override
     public void cancelReservation(Long id, boolean isAdmin, String currentUsername) {
         Reservation res = reservationRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> {
+                    log.warn("RESERVATION CANCEL FAILED (not found): id=[{}], by=[{}]", id, currentUsername);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND,
+                            "Reservation not found: " + id);
+                });
 
         if (!isAdmin && !res.getStudent().getUsername().equals(currentUsername)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            log.warn("RESERVATION CANCEL DENIED: id=[{}], owner=[{}], attemptedBy=[{}]",
+                    id, res.getStudent().getUsername(), currentUsername);
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "You cannot cancel this reservation.");
         }
 
         if (res.getStartTime().isBefore(LocalDateTime.now())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Geçmiş rezervasyonlar üzerinde işlem yapılamaz.");
+            log.warn("RESERVATION CANCEL REJECTED (past): id=[{}], by=[{}]", id, currentUsername);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Past reservations cannot be changed.");
         }
 
         res.setCancelled(true);
         reservationRepository.save(res);
-        log.warn("CANCELLED: Reservation [{}] by [{}]", id, currentUsername);
+
+        log.info("RESERVATION CANCELLED: id=[{}], cancelledBy=[{}], role=[{}], place=[{}]",
+                id, currentUsername, isAdmin ? "ADMIN" : "USER",
+                res.getPlace().getId());
     }
 }

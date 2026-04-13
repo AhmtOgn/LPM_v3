@@ -21,14 +21,10 @@ public class FileStorageService {
     public String saveFile(MultipartFile file) {
         if (file.isEmpty()) return null;
 
-        // Dosya adını benzersiz yapalım
         String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
 
         try {
-            // Proje dizinine göre yolu belirle
             Path path = Paths.get(uploadFolder + fileName);
-
-            // Dosyayı fiziksel olarak kopyala
             Files.copy(file.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
 
             log.info("IMAGE UPLOAD: File saved to static folder: [{}]", fileName);

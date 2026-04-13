@@ -8,10 +8,26 @@
 </head>
 <body>
 <div id="modal-tag"></div>
-
+<div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="card mx-auto mt-5" style="max-width: 1100px;">
     <div class="card-header">All Reservations</div>
     <div class="card-body">
+
+        <div th:if="${successMessage}"
+             class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <span th:text="${successMessage}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <div th:if="${errorMessage}"
+             class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <strong>Operation Failed:</strong>
+            <span th:text="${errorMessage}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
         <button type="button" onclick="AddReservation()"
                 class="w-100 btn btn-outline-primary mb-3">
             <i class="bi bi-calendar-plus-fill"></i>&nbsp;Add Reservation
@@ -32,24 +48,25 @@
             <tbody>
             <tr th:each="r : ${reservations}">
                 <td th:text="${r.id}"></td>
-
-                <!-- BUG FIX: DTO artık flat — r.studentDto.name → r.studentName -->
                 <td th:text="${r.studentName != null ? r.studentName : '-'}"></td>
-
-                <!-- BUG FIX: r.placeDto.building → r.placeName -->
                 <td th:text="${r.placeName != null ? r.placeName : '-'}"></td>
-
-                <td th:text="${r.startTime}"></td>
-                <td th:text="${r.endTime}"></td>
+                <td>
+                    <i class="bi bi-clock"></i>
+                    <span th:text="${#temporals.format(r.startTime, 'dd MMMM yyyy - HH:mm')}"></span>
+                </td>
+                <td>
+                    <i class="bi bi-clock-fill"></i>
+                    <span th:text="${#temporals.format(r.endTime, 'dd MMMM yyyy - HH:mm')}"></span>
+                </td>
 
                 <td>
-                    <!-- getDynamicStatus() → Thymeleaf'te "dynamicStatus" olarak erişilir -->
                     <span th:switch="${r.dynamicStatus}">
                         <span th:case="'Cancelled'" class="badge bg-secondary">Cancelled</span>
                         <span th:case="'Past'"      class="badge bg-dark">Past</span>
                         <span th:case="'Oncoming'"  class="badge bg-primary">Oncoming</span>
                         <span th:case="'Continues'" class="badge bg-success">In Progress</span>
-                        <span th:case="*"           class="badge bg-light text-dark" th:text="${r.dynamicStatus}"></span>
+                        <span th:case="*"           class="badge bg-light text-dark"
+                              th:text="${r.dynamicStatus}"></span>
                     </span>
                 </td>
 
@@ -75,10 +92,27 @@
     </div>
 </div>
 
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="errorToast" class="toast align-items-center text-white bg-danger border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body" id="errorToastBody"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                    data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
 <script>
+    function showErrorToast(msg) {
+        document.getElementById('errorToastBody').textContent = msg;
+        const toast = new bootstrap.Toast(document.getElementById('errorToast'));
+        toast.show();
+    }
+
     function AddReservation() {
         $.ajax({
             url: '/reservation/add', type: 'get',
@@ -86,9 +120,14 @@
                 $('#modal-tag').html(data);
                 $('#modal-tag').find('.modal').modal('show');
             },
-            error: function () { alert("Could not open Add Reservation form."); }
+            error: function (r) {
+                showErrorToast(r.status === 403
+                    ? 'Access denied. You do not have permission.'
+                    : 'Could not open Add Reservation form.');
+            }
         });
     }
+
     function Details(id) {
         $.ajax({
             url: '/reservation/' + id, type: 'get',
@@ -96,9 +135,14 @@
                 $('#modal-tag').html(data);
                 $('#modal-tag').find('.modal').modal('show');
             },
-            error: function () { alert("Could not load reservation details."); }
+            error: function (r) {
+                showErrorToast(r.status === 403
+                    ? 'Access denied. You can only view your own reservations.'
+                    : 'Could not load reservation details.');
+            }
         });
     }
+
     function Update(id) {
         $.ajax({
             url: '/reservation/update/' + id, type: 'get',
@@ -106,15 +150,25 @@
                 $('#modal-tag').html(data);
                 $('#modal-tag').find('.modal').modal('show');
             },
-            error: function () { alert("Could not open Update form."); }
+            error: function (r) {
+                showErrorToast(r.status === 403
+                    ? 'Access denied. You can only update your own reservations.'
+                    : 'Could not open Update form.');
+            }
         });
     }
+
     function Cancel(id) {
-        if (!confirm("This reservation will be cancelled!\nAre you sure?")) return;
+        if (!confirm('This reservation will be cancelled!\nAre you sure?')) return;
         $.ajax({
             url: '/reservation/cancel/' + id, type: 'delete',
-            success: function () { window.location.replace("/reservation/all"); },
-            error: function (r) { alert("Cancel failed: " + r.responseText); }
+            success: function () { window.location.replace('/reservation/all'); },
+            error: function (r) {
+                const msg = r.responseText
+                    ? r.responseText
+                    : (r.status === 403 ? 'Access denied.' : 'Cancel failed.');
+                showErrorToast(msg);
+            }
         });
     }
 </script>
