@@ -8,16 +8,32 @@
             <div class="modal-body">
                 <p><strong>ID:</strong> <span th:text="${reservation.id}"></span></p>
 
-                <!-- Student and Place Information -->
-                <p><strong>Student:</strong> <span th:text="${reservation.studentDto != null ? reservation.studentDto.name : 'N/A'}"></span></p>
-                <p><strong>Place:</strong> <span th:text="${reservation.placeDto != null ? reservation.placeDto.building + ' - ' + reservation.placeDto.room : 'N/A'}"></span></p>
+                <!-- BUG FIX: reservation.student.name → reservation.studentName (flat DTO) -->
+                <p><strong>Student:</strong>
+                    <span th:text="${reservation.studentName != null ? reservation.studentName : 'N/A'}"></span>
+                    <small class="text-muted"
+                           th:text="${reservation.studentUsername != null ? '(' + reservation.studentUsername + ')' : ''}">
+                    </small>
+                </p>
 
-                <p><strong>Starting Date:</strong> <span th:text="${reservation.date}"></span></p>
-                <p><strong>End Date:</strong> <span th:text="${reservation.duration}"></span></p>
+                <!-- BUG FIX: reservation.place.building → reservation.placeName (flat DTO) -->
+                <p><strong>Place:</strong>
+                    <span th:text="${reservation.placeName != null ? reservation.placeName : 'N/A'}"></span>
+                </p>
+
+                <!-- BUG FIX: reservation.date → reservation.startTime -->
+                <p><strong>Start:</strong> <span th:text="${reservation.startTime}"></span></p>
+
+                <!-- BUG FIX: reservation.duration → reservation.endTime -->
+                <p><strong>End:</strong> <span th:text="${reservation.endTime}"></span></p>
 
                 <p><strong>Status:</strong>
-                    <span th:if="${!reservation.reserved}" class="badge bg-success">Available</span>
-                    <span th:if="${reservation.reserved}" class="badge bg-danger">Reserved</span>
+                    <span th:switch="${reservation.dynamicStatus}">
+                        <span th:case="'Cancelled'" class="badge bg-secondary">Cancelled</span>
+                        <span th:case="'Past'"      class="badge bg-dark">Past</span>
+                        <span th:case="'Oncoming'"  class="badge bg-primary">Oncoming</span>
+                        <span th:case="'Continues'" class="badge bg-success">In Progress</span>
+                    </span>
                 </p>
             </div>
             <div class="modal-footer">

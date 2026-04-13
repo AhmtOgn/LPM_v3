@@ -1,14 +1,13 @@
 package sau.lpm_v3.service;
 
 import sau.lpm_v3.dtos.ReservationDTO;
-import sau.lpm_v3.model.Reservation;
-
+import org.springframework.security.core.Authentication;
 import java.util.List;
 
 public interface ReservationService {
-    public List<ReservationDTO> getAllReservations();
-    public ReservationDTO getReservationById(Long id);
-    public ReservationDTO createReservation(ReservationDTO reservationDto);
-    public ReservationDTO updateReservation(Long id, ReservationDTO reservationDto);
-    public void deleteReservation(Long id);
+    ReservationDTO createReservation(ReservationDTO dto, Authentication auth);
+    List<ReservationDTO> getAllReservations(boolean isAdmin, String username);
+    public ReservationDTO updateReservation(Long id, ReservationDTO dto, boolean isAdmin, String currentUsername);
+    void cancelReservation(Long id, boolean isAdmin, String currentUsername);
+    ReservationDTO getReservationById(Long id, boolean isAdmin, String currentUsername);
 }

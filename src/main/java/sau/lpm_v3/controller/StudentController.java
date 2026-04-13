@@ -1,11 +1,13 @@
 package sau.lpm_v3.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import sau.lpm_v3.dtos.StudentDTO;
-import sau.lpm_v3.model.Student;
-import sau.lpm_v3.repository.StudentRepository;
 import sau.lpm_v3.service.StudentService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,24 +20,15 @@ import java.util.List;
 @Controller
 @Slf4j
 @RequestMapping("/student")
+@RequiredArgsConstructor
 public class StudentController {
 
     private final StudentService studentService;
-    private final StudentRepository studentRepository;
-
-    public StudentController(StudentService studentService, StudentRepository studentRepository) {
-        this.studentService = studentService;
-        this.studentRepository = studentRepository;
-    }
 
     @GetMapping("all")
     public String getAllStudents(Model model, Authentication auth) {
         boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-
-        // Tüm mantık servisin içinde
-        List<StudentDTO> students = studentService.getAllStudentsFiltered(isAdmin, auth.getName());
-
-        model.addAttribute("students", students);
+        model.addAttribute("students", studentService.getAllStudents(isAdmin, auth.getName()));
         return "students/all";
     }
 
@@ -63,29 +56,30 @@ public class StudentController {
     }
 
     @GetMapping("/update/{id}")
-    public String updateStudent(@PathVariable Long id, Model model) {
-        //  Already getStudentById converts DTO
-        model.addAttribute("student", studentService.getStudentById(id));
+    public String updateStudent(@PathVariable Long id, Model model, Authentication auth) {
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        model.addAttribute("student", studentService.getStudentByIdSecure(id, isAdmin, auth.getName()));
         return "students/_update";
     }
-
 
     @PostMapping("/update")
     public String updateStudent(@ModelAttribute("student") StudentDTO studentDto, Authentication auth) {
         boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-
         studentService.updateStudent(studentDto.getId(), studentDto, isAdmin, auth.getName());
         return "redirect:/student/all";
     }
 
     @DeleteMapping("/delete/{id}")
-    public ResponseEntity<String> deleteStudent(@PathVariable Long id) {
+    @ResponseBody
+    public ResponseEntity<String> deleteStudent(@PathVariable Long id, Authentication auth,
+                                                HttpServletRequest request, HttpServletResponse response) {
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        String result = studentService.deleteStudent(id, isAdmin, auth.getName());
 
-        // It is going to add USER DETAILS who performed to action
-        log.warn("Student [{}] DELETED", studentService.getStudentById(id).getName());
-
-        studentService.deleteStudent(id);
-        return new ResponseEntity<>(HttpStatus.OK);
+        if ("SELF_DELETED".equals(result)) {
+            new SecurityContextLogoutHandler().logout(request, response, auth);
+        }
+        return new ResponseEntity<>(result, HttpStatus.OK);
     }
 }
 

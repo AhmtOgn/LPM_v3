@@ -16,8 +16,13 @@ public class HomeController {
         return "login";
     }
 
-    @GetMapping("/403")
+    @GetMapping("/about")
+    public String about() {
+        return "about";
+    }
+
+    @GetMapping("/error/403")
     public String accessDenied() {
-        return "403";
+        return "error/403";
     }
 }

@@ -1,12 +1,13 @@
 package sau.lpm_v3.service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.web.server.ResponseStatusException;
 import sau.lpm_v3.dtos.StudentDTO;
 import sau.lpm_v3.enums.Role;
 import sau.lpm_v3.exception.ErrorMessages;
-import sau.lpm_v3.exception.ResourceAlreadyExistsException;
 import sau.lpm_v3.exception.ResourceNotFoundException;
 import sau.lpm_v3.model.Student;
 import sau.lpm_v3.repository.StudentRepository;
@@ -16,107 +17,92 @@ import java.util.List;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class StudentServiceImpl implements StudentService {
     private final StudentRepository studentRepository;
+    private final BCryptPasswordEncoder passwordEncoder;
+    private final FileStorageService fileStorageService;
 
-    @Autowired
-    private BCryptPasswordEncoder passwordEncoder;
-    @Autowired
-    private FileStorageService fileStorageService;
+    @Override
+    public StudentDTO getStudentByIdSecure(Long id, boolean isAdmin, String currentUsername) {
+        Student student = studentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorMessages.ERROR_STUDENT_NOT_FOUND));
 
-    public StudentServiceImpl(StudentRepository studentRepository) {
-        this.studentRepository = studentRepository;
-    }
-
-    public StudentDTO getStudentById(Long id) {
-        return studentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorMessages.ERROR_STUDENT_NOT_FOUND + ": " + id)).viewAsStudentDTO();
-    }
-
-    public List<StudentDTO> getAllStudents() {
-        return studentRepository.findAll().stream().map(Student::viewAsStudentDTO).toList();
+        if (!isAdmin && !student.getUsername().equals(currentUsername)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Yetkisiz erişim denemesi!");
+        }
+        return student.viewAsStudentDTO();
     }
 
     @Override
-    public List<StudentDTO> getAllStudentsFiltered(boolean isAdmin, String username) {
+    public List<StudentDTO> getAllStudents(boolean isAdmin, String username) {
         if (isAdmin) {
-            // Admin her şeyi görür [cite: 11]
-            return studentRepository.findAll().stream()
-                    .map(Student::viewAsStudentDTO).toList();
-        } else {
-            // User sadece kendini görür [cite: 12]
-            Student student = studentRepository.findByUsername(username);
-            return (student != null) ? List.of(student.viewAsStudentDTO()) : List.of();
+            return studentRepository.findAll().stream().map(Student::viewAsStudentDTO).toList();
         }
+        Student student = studentRepository.findByUsername(username);
+        return (student != null) ? List.of(student.viewAsStudentDTO()) : List.of();
     }
 
+
+    @Override
     public StudentDTO createStudent(StudentDTO studentDto) {
         Student student = studentDto.toEntity();
-
-        if (studentRepository.findById(student.getId()).isPresent()) {
-            throw new ResourceAlreadyExistsException(ErrorMessages.ERROR_STUDENT_ALREADY_EXIST + ": " + student.getId());
-        }
-
         student.setPassword(passwordEncoder.encode(studentDto.getPassword()));
 
         if (studentDto.getImageFile() != null && !studentDto.getImageFile().isEmpty()) {
-            String savedFileName = fileStorageService.saveFile(studentDto.getImageFile());
-
-            if (savedFileName != null) {
-                student.setImageURL("/images/" + savedFileName);
-                log.info("Student [{}] profile picture path set to: [{}]", student.getUsername(), student.getImageURL());
-            }
-
-            log.info("IMAGE UPLOAD: Student [{}] profile picture saved as [{}]",
-                    student.getUsername(), savedFileName);
+            student.setImageURL("/images/" + fileStorageService.saveFile(studentDto.getImageFile()));
         }
 
-        if (student.getRole() == null) { student.setRole(Role.USER); }
+        if (student.getRole() == null) student.setRole(Role.USER);
 
-        Student savedStudent = studentRepository.save(student);
-
-        log.info("A new Student [{}] REGISTERED. Username: [{}], Role: [{}]",
-                savedStudent.getName(), savedStudent.getUsername(), savedStudent.getRole());
-
-        return savedStudent.viewAsStudentDTO();
+        log.info("NEW STUDENT: [{}] created by registration.", student.getUsername()); //
+        return studentRepository.save(student).viewAsStudentDTO();
     }
 
     @Override
     public StudentDTO updateStudent(Long id, StudentDTO studentDto, boolean isAdmin, String currentUsername) {
-        Student existingStudent = studentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Öğrenci bulunamadı: " + id));
+        Student existing = studentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorMessages.ERROR_STUDENT_NOT_FOUND));
 
-        // GÜVENLİK KONTROLÜ: Admin değilse ve başkasını güncelliyorsa engelle
-        if (!isAdmin && !existingStudent.getUsername().equals(currentUsername)) {
-            throw new RuntimeException("Yetkisiz işlem! Sadece kendi profilinizi güncelleyebilirsiniz.");
+        if (!isAdmin && !existing.getUsername().equals(currentUsername)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Sadece kendinizi güncelleyebilirsiniz.");
         }
 
-        // Bilgileri aktar
-        existingStudent.setName(studentDto.getName());
-        existingStudent.setDepartment(studentDto.getDepartment());
+        existing.setName(studentDto.getName());
+        existing.setDepartment(studentDto.getDepartment());
 
-        // ROL KORUMASI: Sadece Admin rol değiştirebilir [cite: 11]
         if (isAdmin && studentDto.getRole() != null) {
-            existingStudent.setRole(studentDto.getRole());
+            existing.setRole(studentDto.getRole());
         }
 
-        // Resim işlemleri (mevcut mantığın devamı) [cite: 16]
         if (studentDto.getImageFile() != null && !studentDto.getImageFile().isEmpty()) {
-            String savedFileName = fileStorageService.saveFile(studentDto.getImageFile());
-            existingStudent.setImageURL("/images/" + savedFileName);
+            existing.setImageURL("/images/" + fileStorageService.saveFile(studentDto.getImageFile()));
         }
 
-        // Yeni kayıt logu (İşlemi yapanın detayıyla) [cite: 14]
-        log.info("Student [{}] updated by [{}]. Role: [{}]",
-                existingStudent.getUsername(), currentUsername, existingStudent.getRole());
-
-        return studentRepository.save(existingStudent).viewAsStudentDTO();
+        log.info("STUDENT UPDATED: [{}] by user [{}].", existing.getUsername(), currentUsername); //
+        return studentRepository.save(existing).viewAsStudentDTO();
     }
 
-    public void deleteStudent(Long id) {
-        studentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorMessages.ERROR_STUDENT_NOT_FOUND + ": " + id));
+    @Override
+    public String deleteStudent(Long id, boolean isAdmin, String currentUsername) {
+        Student student = studentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorMessages.ERROR_STUDENT_NOT_FOUND));
+
+        if (!isAdmin && !student.getUsername().equals(currentUsername)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Silme yetkiniz yok.");
+        }
+
         studentRepository.deleteById(id);
+        log.warn("STUDENT DELETED: [{}] by user [{}].", student.getUsername(), currentUsername); //
+
+        return (!isAdmin && student.getUsername().equals(currentUsername)) ? "SELF_DELETED" : "DELETED";
+    }
+
+    @Override
+    public StudentDTO getStudentById(Long id) {
+        return studentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorMessages.ERROR_STUDENT_NOT_FOUND))
+                .viewAsStudentDTO();
     }
 
 }
