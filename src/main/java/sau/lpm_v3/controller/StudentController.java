@@ -27,7 +27,7 @@ public class StudentController {
 
     @GetMapping("all")
     public String getAllStudents(Model model, Authentication auth) {
-        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isAdmin = isAdmin(auth);
         model.addAttribute("students", studentService.getAllStudents(isAdmin, auth.getName()));
         return "students/all";
     }
@@ -45,26 +45,27 @@ public class StudentController {
     }
 
     @PostMapping(value = "/add", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public String addStudent(@ModelAttribute("student") StudentDTO studentDto) {
+    public String addStudent(@ModelAttribute("student") StudentDTO studentDto, Authentication auth) {
+        log.info("[USER: {}] ACTION: Adding new student with name: [{}]",
+                auth.getName(), studentDto.getName());
 
-        // It is going to add USER DETAILS who performed to action
-        log.info("A new Student [{}] ADDED.", studentDto.getName());
-
-        // Converting operating made internally
         studentService.createStudent(studentDto);
         return "redirect:/student/all";
     }
 
     @GetMapping("/update/{id}")
     public String updateStudent(@PathVariable Long id, Model model, Authentication auth) {
-        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isAdmin = isAdmin(auth);
         model.addAttribute("student", studentService.getStudentByIdSecure(id, isAdmin, auth.getName()));
         return "students/_update";
     }
 
     @PostMapping("/update")
     public String updateStudent(@ModelAttribute("student") StudentDTO studentDto, Authentication auth) {
-        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        log.info("[USER: {}] ACTION: Updating student ID: [{}]",
+                auth.getName(), studentDto.getId());
+
+        boolean isAdmin = isAdmin(auth);
         studentService.updateStudent(studentDto.getId(), studentDto, isAdmin, auth.getName());
         return "redirect:/student/all";
     }
@@ -73,13 +74,21 @@ public class StudentController {
     @ResponseBody
     public ResponseEntity<String> deleteStudent(@PathVariable Long id, Authentication auth,
                                                 HttpServletRequest request, HttpServletResponse response) {
-        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        log.warn("[USER: {}] ACTION: Deleting student ID: [{}]",
+                auth.getName(), id);
+
+        boolean isAdmin = isAdmin(auth);
         String result = studentService.deleteStudent(id, isAdmin, auth.getName());
 
         if ("SELF_DELETED".equals(result)) {
             new SecurityContextLogoutHandler().logout(request, response, auth);
         }
         return new ResponseEntity<>(result, HttpStatus.OK);
+    }
+
+    private boolean isAdmin(Authentication auth) {
+        return auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
     }
 }
 

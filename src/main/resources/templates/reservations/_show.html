@@ -8,7 +8,6 @@
             <div class="modal-body">
                 <p><strong>ID:</strong> <span th:text="${reservation.id}"></span></p>
 
-                <!-- BUG FIX: reservation.student.name → reservation.studentName (flat DTO) -->
                 <p><strong>Student:</strong>
                     <span th:text="${reservation.studentName != null ? reservation.studentName : 'N/A'}"></span>
                     <small class="text-muted"
@@ -16,15 +15,11 @@
                     </small>
                 </p>
 
-                <!-- BUG FIX: reservation.place.building → reservation.placeName (flat DTO) -->
                 <p><strong>Place:</strong>
                     <span th:text="${reservation.placeName != null ? reservation.placeName : 'N/A'}"></span>
                 </p>
 
-                <!-- BUG FIX: reservation.date → reservation.startTime -->
                 <p><strong>Start:</strong> <span th:text="${reservation.startTime}"></span></p>
-
-                <!-- BUG FIX: reservation.duration → reservation.endTime -->
                 <p><strong>End:</strong> <span th:text="${reservation.endTime}"></span></p>
 
                 <p><strong>Status:</strong>

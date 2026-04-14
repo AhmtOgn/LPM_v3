@@ -23,17 +23,14 @@ public class AuthController {
     @GetMapping("/register")
     public String showRegisterForm(Model model) {
         model.addAttribute("student", new StudentDTO());
-        return "register"; // templates/register.html dosyasını arayacak
+        return "register";
     }
 
     @PostMapping(value = "/register", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public String registerStudent(@ModelAttribute("student") StudentDTO studentDto) {
         log.info("New registration request for username: [{}]", studentDto.getUsername());
 
-        // Rol null gideceği için StudentServiceImpl içinde otomatik olarak Role.USER atanacak.
         studentService.createStudent(studentDto);
-
-        // Kayıt başarılı olduktan sonra login sayfasına bir parametre ile yönlendiriyoruz
         return "redirect:/login?registered";
     }
 }

@@ -6,11 +6,6 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <!--
-                    BUG FIX: Action URL'de {id} path variable var,
-                    controller'da da @PostMapping("/update/{id}") olmalı.
-                    (Önceki controller'da "/update" vardı — path variable eksikti.)
-                -->
                 <form th:action="@{/reservation/update/{id}(id=${reservation.id})}"
                       th:object="${reservation}" method="post">
 
@@ -25,28 +20,18 @@
                         </select>
                     </div>
 
-                    <!-- BUG FIX: th:field="*{date}" → *{startTime} -->
                     <div class="mb-3">
                         <label class="form-label">Start Date & Time</label>
                         <input type="datetime-local" th:field="*{startTime}"
                                class="form-control" required>
                     </div>
 
-                    <!-- BUG FIX: th:field="*{duration}" → *{endTime} -->
                     <div class="mb-3">
                         <label class="form-label">End Date & Time</label>
                         <input type="datetime-local" th:field="*{endTime}"
                                class="form-control" required>
                     </div>
 
-                    <!--
-                        BUG FIX: th:field="*{reserved}" → *{cancelled}
-                        Lombok @Data ile "boolean isCancelled" field'ı için
-                        getter isCancelled() → Spring property adı "cancelled" olur.
-                        Thymeleaf de "cancelled" ile bağlanır.
-                        NOT: Bu alan sadece ADMIN görebilir; USER zaten kendi
-                        rezervasyonunu cancel butonu ile iptal eder.
-                    -->
                     <div class="mb-3" sec:authorize="hasRole('ADMIN')"
                          xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
                         <label class="form-label">Status</label>

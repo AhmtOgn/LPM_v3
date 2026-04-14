@@ -12,10 +12,10 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     List<Reservation> findByStudentUsername(String username);
 
-    // GÜNCELLEME İÇİN ÇAKIŞMA KONTROLÜ: Mevcut rezervasyonun ID'sini hariç tutar
+
     @Query("SELECT COUNT(r) > 0 FROM Reservation r " +
             "WHERE r.place.id = :placeId " +
-            "AND r.id <> :currentId " + // Kendi ID'sini kontrol dışı bırak
+            "AND r.id <> :currentId " +
             "AND r.isCancelled = false " +
             "AND r.startTime < :endTime " +
             "AND r.endTime > :startTime")
@@ -24,7 +24,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
                                          @Param("endTime") LocalDateTime endTime,
                                          @Param("currentId") Long currentId);
 
-    // (Yeni_Bas < Mevcut_Bit) VE (Yeni_Bit > Mevcut_Bas)
+
     @Query("SELECT COUNT(r) > 0 FROM Reservation r " +
             "WHERE r.place.id = :placeId " +
             "AND r.isCancelled = false " +
@@ -34,7 +34,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
                             @Param("startTime") LocalDateTime startTime,
                             @Param("endTime") LocalDateTime endTime);
 
-    // 2. GÜNLÜK LİMİT KONTROLÜ: Öğrenci bugün zaten rezervasyon yapmış mı?
+
     @Query("SELECT COUNT(r) > 0 FROM Reservation r " +
             "WHERE r.student.id = :studentId " +
             "AND r.isCancelled = false " +

@@ -6,19 +6,7 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <!--
-                    th:object="${reservation}" + th:field kullanıldığında
-                    Spring, ReservationDTO'nun getter'larını çağırır.
-                    @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm") DTO'da tanımlı.
-                -->
                 <form th:action="@{/reservation/add}" th:object="${reservation}" method="post">
-
-                    <!--
-                        BUG FIX (Controller): addReservation GET'te "place" → "places" ve
-                        "students" eksikti. Her iki değişken de controller'da eklendi.
-                        USER rolü kendi adına rezervasyon yapar (service halleder),
-                        ADMIN ise istediği öğrenci için yapabilir.
-                    -->
                     <div class="mb-3" sec:authorize="hasRole('ADMIN')"
                          xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
                         <label class="form-label">Student (Admin only)</label>
@@ -31,7 +19,6 @@
                         </select>
                     </div>
 
-                    <!-- BUG FIX: Controller'da "place" → "places" düzeltildi -->
                     <div class="mb-3">
                         <label class="form-label">Place</label>
                         <select th:field="*{placeId}" class="form-select" required>
@@ -43,14 +30,12 @@
                         </select>
                     </div>
 
-                    <!-- BUG FIX: name="date" → th:field="*{startTime}" -->
                     <div class="mb-3">
                         <label class="form-label">Start Date & Time</label>
                         <input type="datetime-local" th:field="*{startTime}"
                                class="form-control" required>
                     </div>
 
-                    <!-- BUG FIX: name="duration" → th:field="*{endTime}" -->
                     <div class="mb-3">
                         <label class="form-label">End Date & Time</label>
                         <input type="datetime-local" th:field="*{endTime}"

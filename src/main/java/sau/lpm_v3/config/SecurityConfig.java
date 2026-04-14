@@ -16,14 +16,14 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf.disable());
         http
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/403", "/login", "/register", "/images/**", "/css/**", "/js/**").permitAll()
+                        .requestMatchers("/", "/login", "/register", "/about", "/images/**", "/css/**", "/js/**").permitAll()
 
                         .requestMatchers("/student/add", "/student/delete/**").hasRole("ADMIN")
-                        .requestMatchers("/place/add", "/place/update/**").hasRole("ADMIN")
+                        .requestMatchers("/place/add", "/place/update/**", "/place/delete/**").hasRole("ADMIN")
 
-                        .requestMatchers("/student/all", "/student/{id}", "/student/update/**").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers("/place/all", "/place/{id}", "/place/delete/**").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers("/reservation/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/student/all", "/student/{id}", "/student/update/**").authenticated()
+                        .requestMatchers("/place/all", "/place/{id}").authenticated()
+                        .requestMatchers("/reservation/**").authenticated()
 
                         .anyRequest().authenticated()
                 )
@@ -39,6 +39,7 @@ public class SecurityConfig {
                 .exceptionHandling(exception -> exception
                         .accessDeniedPage("/error/403")
                 )
+
 
                 .logout(logout -> logout
                         .logoutUrl("/logout")
